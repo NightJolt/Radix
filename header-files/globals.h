@@ -2,11 +2,13 @@
 
 #include <iostream>
 #include <fstream>
+
 #include <vector>
-#include <cstring>
-#include <memory>
 #include <map>
 #include <unordered_map>
+
+#include <cstring>
+#include <memory>
 
 #define LOOP(LOOP_I, LOOP_S, LOOP_E) for (auto (LOOP_I) = (LOOP_S); (LOOP_I) != (LOOP_E); (LOOP_I)++)
 
@@ -20,17 +22,6 @@ std::ostream& operator <<(std::ostream& out, const vector <T>& v) {
 
     return out;
 }
-
-struct VAR_DEF {
-    string name;
-    string type;
-    string val;
-};
-
-/*struct FUN_DEF {
-    string name;
-    vector <VAR_DEF> args;
-};*/
 
 struct SuffixData {
     explicit SuffixData(const char* str) {

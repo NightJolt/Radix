@@ -9,8 +9,8 @@ ofstream Preprocessor::out_file = ofstream();
 
 StringTokenizer Preprocessor::st = StringTokenizer(delims, sizeof delims / sizeof *delims, true, true);
 
-void Preprocessor::Init(string path, const char* file_name) {
-    main_path = move(path);
+void Preprocessor::Init(const string& path, const char* file_name) {
+    main_path = path;
 
     out_file.open(file_name);
 }
@@ -52,7 +52,7 @@ void Preprocessor::ProcessLine(string& line) {
     if (line.empty()) return;
 
     if (line[0] == '#') {
-        ProcessTag(line);
+        ProcessMacro(line);
     } else if (line[0] != '`') {
         out_file << line << endl;
     }
@@ -60,7 +60,7 @@ void Preprocessor::ProcessLine(string& line) {
     line.clear();
 }
 
-void Preprocessor::ProcessTag(const string& line) {
+void Preprocessor::ProcessMacro(const string& line) {
     st.Clear();
 
     st.Process(line);

@@ -11,6 +11,7 @@ public:
     ~StringTokenizer();
 
     void Process(const string&);
+
     string NextToken();
     bool TokenLeft();
 

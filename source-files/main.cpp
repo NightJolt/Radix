@@ -2,7 +2,6 @@
 
 #include "StringTokenizer.h"
 #include "Preprocessor.h"
-#include "NASM.h"
 
 int main(int arg_cnt, char** arg_vec) {
     ios::sync_with_stdio(false);
@@ -28,16 +27,9 @@ int main(int arg_cnt, char** arg_vec) {
         }
     }
 
-    //char* processed_file_name = strdup(main_file.c_str());
-    //char* assembly_file_name
-
     Preprocessor::Init(project_path, "out.prad");
     Preprocessor::ProcessFile(main_file);
     Preprocessor::Term();
-
-    /*NASM::Init(assembly_file_name);
-    NASM::Assemble(processed_file_name);*/
-    //NASM::Term();
 
     return 0;
 }
