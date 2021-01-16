@@ -7,13 +7,21 @@ using namespace std;
 class StringTokenizer {
 public:
 
-    StringTokenizer(const char* const*, int, bool, bool);
+    enum MODE {
+        FIRST_TO_FIT,
+        LAST_TO_FIT
+    };
+
+    StringTokenizer(const char* const*, int, bool, MODE);
     ~StringTokenizer();
 
     void Process(const string&);
 
     string NextToken();
-    bool TokenLeft();
+    string NextTokenUnpopped();
+    void Pop();
+    bool TokensLeft();
+    int TokensCount();
 
     StringTokenizer& operator = (const StringTokenizer&) = delete;
 
@@ -21,13 +29,18 @@ public:
 
 private:
 
+    void ResetBuffer(string&);
+
+    void FirstToFit(const string&);
+    void LastToFit(const string&);
+
     void RegToken(const string&);
-    void ClearTokens();
+    void ClearGarbageTokens();
 
     int token_index;
     int delims_count;
     bool include_delims;
-    bool exclude_empty;
+    MODE mode;
 
     vector <string> tokens;
 

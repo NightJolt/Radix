@@ -22,8 +22,4 @@ private:
 
     static constexpr char const* const delims[] = { "#", ":", " " };
     static StringTokenizer st;
-
-    //static map <string, string> def_val;
-    //static map <string, vector <string>> def_args;
-    //static vector <SuffixData*> def_data;
 };

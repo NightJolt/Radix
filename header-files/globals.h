@@ -10,7 +10,7 @@
 #include <cstring>
 #include <memory>
 
-#define LOOP(LOOP_I, LOOP_S, LOOP_E) for (auto (LOOP_I) = (LOOP_S); (LOOP_I) != (LOOP_E); (LOOP_I)++)
+#define LOOP(LOOP_I, LOOP_S, LOOP_E) for (auto (LOOP_I) = (LOOP_S); (LOOP_I) < (LOOP_E); (LOOP_I)++)
 
 using namespace std;
 
@@ -64,6 +64,10 @@ struct SuffixData {
         pat = sd.pat;
         sd.pat = nullptr;
         lps = move(sd.lps);
+    }
+
+    bool operator <(const SuffixData& sd) const {
+        return lps.size() < sd.lps.size();
     }
 
     char* pat;

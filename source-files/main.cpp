@@ -2,6 +2,7 @@
 
 #include "StringTokenizer.h"
 #include "Preprocessor.h"
+#include "Compiler.h"
 
 int main(int arg_cnt, char** arg_vec) {
     ios::sync_with_stdio(false);
@@ -11,14 +12,14 @@ int main(int arg_cnt, char** arg_vec) {
 
     {
         const char* const delims[1] = { "/" };
-        StringTokenizer st(delims, 1, true, false);
+        StringTokenizer st(delims, 1, true, StringTokenizer::FIRST_TO_FIT);
 
         st.Process(arg_vec[1]);
 
         while (true) {
             string token = st.NextToken();
 
-            if (st.TokenLeft()) project_path += token;
+            if (st.TokensLeft()) project_path += token;
             else {
                 main_file = token;
 
@@ -30,6 +31,12 @@ int main(int arg_cnt, char** arg_vec) {
     Preprocessor::Init(project_path, "out.prad");
     Preprocessor::ProcessFile(main_file);
     Preprocessor::Term();
+
+    Compiler::Init("out.asm");
+    Compiler::Assemble("out.prad");
+
+    /*system("nasm -f elf out.asm");
+    system("ld -m elf_i386 -s -o out out.o");*/
 
     return 0;
 }

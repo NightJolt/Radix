@@ -5,9 +5,7 @@
 string Preprocessor::main_path = string();
 ofstream Preprocessor::out_file = ofstream();
 
-//vector <SuffixData*> Preprocessor::def_data = vector <SuffixData*> ();
-
-StringTokenizer Preprocessor::st = StringTokenizer(delims, sizeof delims / sizeof *delims, true, true);
+StringTokenizer Preprocessor::st = StringTokenizer(delims, sizeof delims / sizeof *delims, true, StringTokenizer::FIRST_TO_FIT);
 
 void Preprocessor::Init(const string& path, const char* file_name) {
     main_path = path;
@@ -15,11 +13,7 @@ void Preprocessor::Init(const string& path, const char* file_name) {
     out_file.open(file_name);
 }
 
-void Preprocessor::Term() {
-    /*MEM_LOOP(LOOP_I, def_data.begin(), def_data.end()) {
-        delete *LOOP_I;
-    }*/
-}
+void Preprocessor::Term() {}
 
 void Preprocessor::ProcessFile(const string& file_name) {
     ifstream file(main_path + file_name);
@@ -54,6 +48,8 @@ void Preprocessor::ProcessLine(string& line) {
     if (line[0] == '#') {
         ProcessMacro(line);
     } else if (line[0] != '`') {
+        // todo insert \n after ; { }
+
         out_file << line << endl;
     }
 
