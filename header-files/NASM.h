@@ -10,6 +10,10 @@ public:
     static string ToVar(const string&);
     static string ToFun(const string&);
 
+    static string ToSVar(int);
+
+    static string SizeToReg(unsigned int, char, char = 'L');
+
     static constexpr char const* const LOGIC_SEGMENT = "segment .text";
     static constexpr char const* const CONSTANT_SEGMENT = "segment .bss";
     static constexpr char const* const GLOBAL_SEGMENT = "segment .data";

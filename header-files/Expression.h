@@ -4,11 +4,17 @@
 
 #include "Radix.h"
 #include "Data.h"
+#include "StringTokenizer.h"
 
 class Expression {
 public:
 
-    //static Expression(const string&);
+    static vector <string> InfixToPostfix(StringTokenizer&);
 
 private:
+
+    struct OP {
+        string op;
+        int prec;
+    };
 };

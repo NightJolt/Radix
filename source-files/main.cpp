@@ -35,8 +35,8 @@ int main(int arg_cnt, char** arg_vec) {
     Compiler::Init("out.asm");
     Compiler::Assemble("out.prad");
 
-    /*system("nasm -f elf out.asm");
-    system("ld -m elf_i386 -s -o out out.o");*/
+    system("nasm -f elf out.asm");
+    system("ld -m elf_i386 -s -o out out.o");
 
     return 0;
 }

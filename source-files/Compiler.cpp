@@ -6,9 +6,12 @@ StringTokenizer Compiler::instruct_tokenizer = StringTokenizer(instruct_delims, 
 StringTokenizer Compiler::exp_tokenizer = StringTokenizer(Radix::exp_delims, sizeof Radix::exp_delims / sizeof *Radix::exp_delims, true, StringTokenizer::LAST_TO_FIT);
 
 vector <unsigned int> Compiler::stack_frame = vector <unsigned int> ();
-vector <Compiler::STACK_VAR_DEF> Compiler::stack = vector <STACK_VAR_DEF> ();
+vector <Compiler::STACK_VAR_DEF> Compiler::stack_mem = vector <STACK_VAR_DEF> ();
 
 unordered_map <string, vector <int>> Compiler::stack_var_ind = unordered_map <string, vector <int>> ();
+int Compiler::temp_var_def = -1;
+
+vector <int> Compiler::scope_frame = vector <int> ();
 
 void Compiler::Init(const char* file_name) {
     out_file.open(file_name);
@@ -57,6 +60,7 @@ void Compiler::Assemble(const char* file_name) {
     PushToAsm("_start:"); NewLineAsm();
 
     PushStack();
+    PushScope();
 
     string line;
 
@@ -72,6 +76,7 @@ void Compiler::Assemble(const char* file_name) {
         }*/
     }
 
+    PopScope();
     PopStack();
 
     PushInstruction(NASM::MOV, NASM::A_32, OP_TYPE::REGISTER, "1", OP_TYPE::CONSTANT);
@@ -118,7 +123,7 @@ void Compiler::ProcessInstrcution(const string& str) {
         PushVarToStack(var_name, size);
 
         if (exp_tokenizer.TokensCount() > 1) {
-            PushInstruction(NASM::MOV, var_name, OP_TYPE::MEMORY, "99", OP_TYPE::CONSTANT, NASM::IdToTypeSpecifier(type_specifier_id));
+            EvalExp();
         } else {
             exp_tokenizer.Pop();
         }
@@ -129,38 +134,100 @@ void Compiler::ProcessInstrcution(const string& str) {
     }
 }
 
+void Compiler::EvalExp() {
+    vector <string> exp = Expression::InfixToPostfix(exp_tokenizer);
+
+    stack <string> res;
+
+    LOOP(i, 0, exp.size()) {
+        const string& op = exp[i];
+        int ip_ind = Radix::GetOperatorId(op);
+
+        if (ip_ind != -1) {
+            if (op == "+") {
+                string op1 = res.top(); res.pop();
+                string op2 = res.top(); res.pop();
+
+                Add(op1, op2);
+            }
+        } else {
+            res.push(op);
+        }
+    }
+
+    temp_var_def = -1;
+}
+
+Compiler::OP_TYPE Compiler::IdentifyOp(const string& str) {
+    if (str[0] == '$') {
+        return OP_TYPE::MEMORY;
+    } else if (stack_var_ind.contains(NASM::ToVar(str))) {
+        return OP_TYPE::MEMORY;
+    } else {
+        return OP_TYPE::CONSTANT;
+    }
+}
+
+string Compiler::Add(const string& a, const string& b) {
+    OP_TYPE type_1 = IdentifyOp(a);
+    OP_TYPE type_2 = IdentifyOp(b);
+
+    string out_var_name = NASM::ToSVar(++temp_var_def);
+    string reg = NASM::SizeToReg(4, 'A');
+
+    PushVarToStack(out_var_name, 4);
+
+    PushInstruction(NASM::MOV, reg, OP_TYPE::REGISTER, a, type_1);
+    PushInstruction(NASM::ADD, reg, OP_TYPE::REGISTER, b, OP_TYPE::CONSTANT);
+    PushInstruction(NASM::MOV, out_var_name, OP_TYPE::MEMORY, reg, OP_TYPE::CONSTANT);
+
+    return out_var_name;
+}
+
 void Compiler::PushStack() {
-    stack_frame.push_back(4); // BASE_PTR(4)
+    stack_frame.push_back(0);
 
     PushInstruction(NASM::PUSH, NASM::BASE_POINTER_32, OP_TYPE::REGISTER, "", OP_TYPE::UNDEFINED);
     PushInstruction(NASM::MOV, NASM::BASE_POINTER_32, OP_TYPE::REGISTER, NASM::STACK_POINTER_32, OP_TYPE::REGISTER);
 }
 
 void Compiler::PopStack() {
-    unsigned int stack_size = stack_frame.back();
-    stack_frame.pop_back();
-
-    stack_size -= 4; // BASE_PTR(4)
-
-    if (stack_size) FreeStack(stack_size);
-
     PushInstruction(NASM::POP, NASM::BASE_POINTER_32, OP_TYPE::REGISTER, "", OP_TYPE::UNDEFINED);
 
-    while (stack_size) {
-        const STACK_VAR_DEF& svd = stack[stack.size() - 1];
+    stack_frame.pop_back();
+}
 
-        stack_size -= svd.size;
+void Compiler::PushScope() {
+    scope_frame.push_back(0);
+}
+
+void Compiler::PopScope() {
+    int cnt = scope_frame.back();
+    scope_frame.pop_back();
+
+    unsigned int mem_freed = 0;
+
+    while (cnt--) {
+        const STACK_VAR_DEF& svd = stack_mem[stack_mem.size() - 1];
+
+        mem_freed += svd.size;
         svd.target_vec->pop_back();
 
-        stack.pop_back();
+        stack_mem.pop_back();
     }
+
+    FreeStack(mem_freed);
 }
 
 void Compiler::AllocStack(unsigned int size) {
+    stack_frame[stack_frame.size() - 1] += size;
+
     PushInstruction(NASM::SUB, NASM::STACK_POINTER_32, OP_TYPE::REGISTER, to_string(size), OP_TYPE::CONSTANT);
 }
 
 void Compiler::FreeStack(unsigned int size) {
+    stack_frame[stack_frame.size() - 1] -=  size;
+
     PushInstruction(NASM::ADD, NASM::STACK_POINTER_32, OP_TYPE::REGISTER, to_string(size), OP_TYPE::CONSTANT);
 }
 
@@ -168,7 +235,9 @@ void Compiler::PushVarToStack(const string& str, unsigned int size) {
     if (stack_frame.empty()) {
         // todo Push to globals
     } else {
-        stack_frame[stack_frame.size() - 1] += size;
+        AllocStack(size);
+
+        scope_frame[scope_frame.size() - 1]++;
 
         if (!stack_var_ind.contains(str)) {
             stack_var_ind[str] = vector <int> ();
@@ -180,18 +249,16 @@ void Compiler::PushVarToStack(const string& str, unsigned int size) {
         svd.offset = stack_frame[stack_frame.size() - 1];
         svd.target_vec = &stack_var_ind[str];
 
-        svd.target_vec->push_back(stack.size());
+        svd.target_vec->push_back(stack_mem.size());
 
-        stack.push_back(svd);
-
-        AllocStack(size);
+        stack_mem.push_back(svd);
     }
 }
 
 unsigned int Compiler::GetVarOffsetFromStack(const string& str) {
     vector <int>* vec_ptr = &stack_var_ind[str];
     int ind = (*vec_ptr)[vec_ptr->size() - 1];
-    unsigned int offest = stack[ind].offset;
+    unsigned int offest = stack_mem[ind].offset;
 
     return offest;
 }

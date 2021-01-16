@@ -6,6 +6,7 @@
 #include "Radix.h"
 #include "NASM.h"
 #include "Data.h"
+#include "Expression.h"
 
 class Compiler {
 public:
@@ -20,6 +21,9 @@ private:
 
     static void PushStack();
     static void PopStack();
+
+    static void PushScope();
+    static void PopScope();
 
     static void AllocStack(unsigned int);
     static void FreeStack(unsigned int);
@@ -42,6 +46,14 @@ private:
     static void SpaceAsm();
     static void NewLineAsm();
 
+    static void EvalExp();
+
+    static OP_TYPE IdentifyOp(const string&);
+
+    static string Add(const string&, const string&);
+
+    static string Equ(const string&, const string&);
+
     static ofstream out_file;
 
     static constexpr char const* const instruct_delims[] = { ";", "{", "}" };
@@ -62,9 +74,12 @@ private:
     };
 
     static vector <unsigned int> stack_frame;
-    static vector <STACK_VAR_DEF> stack;
+    static vector <STACK_VAR_DEF> stack_mem;
 
     static unordered_map <string, vector <int>> stack_var_ind;
+    static int temp_var_def;
+
+    static vector <int> scope_frame;
 
     static vector <unsigned int> instruction_frame;
 };
