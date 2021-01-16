@@ -61,17 +61,21 @@ void Compiler::Assemble(const char* file_name) {
     string line;
 
     while (instruct_tokenizer.TokensLeft()) {
-        cout << "New Instrcution" << endl;
+        //cout << "New Instrcution" << endl;
 
-        //ProcessInstrcution(instruct_tokenizer.NextToken());
-        exp_tokenizer.Process(instruct_tokenizer.NextToken());
+        ProcessInstrcution(instruct_tokenizer.NextToken());
+
+        /*exp_tokenizer.Process(instruct_tokenizer.NextToken());
 
         while (exp_tokenizer.TokensLeft()) {
             cout << "Token [" << exp_tokenizer.NextToken() << "]" << endl;
-        }
+        }*/
     }
 
     PopStack();
+
+    PushInstruction(NASM::MOV, NASM::A_32, OP_TYPE::REGISTER, "1", OP_TYPE::CONSTANT);
+    PushToAsm(NASM::KERNEL_INTERRUPT); NewLineAsm();
 
     PushToAsm(NASM::GLOBAL_SEGMENT); NewLineAsm();
 
@@ -87,7 +91,9 @@ void Compiler::TokenizeCodeIntoInstructions(ifstream& file) {
     string code;
 
     while (getline(file, line)) {
-        if (!line.empty()) code += line;
+        if (!line.empty())
+            code.append(" "),
+            code += line;
     }
 
     instruct_tokenizer.Process(code);
@@ -98,6 +104,7 @@ void Compiler::TokenizeCodeIntoInstructions(ifstream& file) {
 }
 
 void Compiler::ProcessInstrcution(const string& str) {
+    exp_tokenizer.Clear(); // Remove
     exp_tokenizer.Process(str);
 
     string first_token = exp_tokenizer.NextToken();
@@ -111,6 +118,7 @@ void Compiler::ProcessInstrcution(const string& str) {
         PushVarToStack(var_name, size);
 
         if (exp_tokenizer.TokensCount() > 1) {
+            PushInstruction(NASM::MOV, var_name, OP_TYPE::MEMORY, "99", OP_TYPE::CONSTANT, NASM::IdToTypeSpecifier(type_specifier_id));
         } else {
             exp_tokenizer.Pop();
         }
@@ -122,7 +130,7 @@ void Compiler::ProcessInstrcution(const string& str) {
 }
 
 void Compiler::PushStack() {
-    stack_frame.push_back(0);
+    stack_frame.push_back(4); // BASE_PTR(4)
 
     PushInstruction(NASM::PUSH, NASM::BASE_POINTER_32, OP_TYPE::REGISTER, "", OP_TYPE::UNDEFINED);
     PushInstruction(NASM::MOV, NASM::BASE_POINTER_32, OP_TYPE::REGISTER, NASM::STACK_POINTER_32, OP_TYPE::REGISTER);
@@ -131,6 +139,8 @@ void Compiler::PushStack() {
 void Compiler::PopStack() {
     unsigned int stack_size = stack_frame.back();
     stack_frame.pop_back();
+
+    stack_size -= 4; // BASE_PTR(4)
 
     if (stack_size) FreeStack(stack_size);
 
@@ -167,7 +177,7 @@ void Compiler::PushVarToStack(const string& str, unsigned int size) {
         STACK_VAR_DEF svd = {};
 
         svd.size = size;
-        svd.prefix_sum = (stack.empty() ? 0 : stack[stack.size() - 1].prefix_sum) + svd.size;
+        svd.offset = stack_frame[stack_frame.size() - 1];
         svd.target_vec = &stack_var_ind[str];
 
         svd.target_vec->push_back(stack.size());
@@ -181,7 +191,7 @@ void Compiler::PushVarToStack(const string& str, unsigned int size) {
 unsigned int Compiler::GetVarOffsetFromStack(const string& str) {
     vector <int>* vec_ptr = &stack_var_ind[str];
     int ind = (*vec_ptr)[vec_ptr->size() - 1];
-    unsigned int offest = stack[ind].prefix_sum;
+    unsigned int offest = stack[ind].offset;
 
     return offest;
 }

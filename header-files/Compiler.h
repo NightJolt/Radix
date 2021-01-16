@@ -16,7 +16,6 @@ public:
 private:
 
     static void TokenizeCodeIntoInstructions(ifstream&);
-
     static void ProcessInstrcution(const string&);
 
     static void PushStack();
@@ -43,31 +42,6 @@ private:
     static void SpaceAsm();
     static void NewLineAsm();
 
-    /*
-     * static void Add();
-     * static void Sub();
-     * static void Mul();
-     * static void Div();
-     * static void Rem();
-     *
-     * static void Inc();
-     * static void Dec();
-     *
-     * static void Equ();
-     * static void Def();
-     * static void Call();
-     *
-     * static void And();
-     * static void Or();
-     * static void Xor();
-     * static void Not();
-     * static void Shift();
-     *
-     * static void Eval();
-     *
-     * if, loop
-    */
-
     static ofstream out_file;
 
     static constexpr char const* const instruct_delims[] = { ";", "{", "}" };
@@ -82,7 +56,8 @@ private:
 
     struct STACK_VAR_DEF {
         unsigned int size;
-        unsigned int prefix_sum;
+        unsigned int offset;
+
         vector <int>* target_vec;
     };
 
@@ -90,9 +65,6 @@ private:
     static vector <STACK_VAR_DEF> stack;
 
     static unordered_map <string, vector <int>> stack_var_ind;
-
-    static vector <unsigned int> scope_frame;
-    static vector <STACK_VAR_DEF> stack;
 
     static vector <unsigned int> instruction_frame;
 };

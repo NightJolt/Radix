@@ -8,7 +8,7 @@
 class Expression {
 public:
 
-    explicit Expression(const string&);
+    //static Expression(const string&);
 
 private:
 };

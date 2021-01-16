@@ -9,6 +9,7 @@
 
 #include <cstring>
 #include <memory>
+#include <cassert>
 
 #define LOOP(LOOP_I, LOOP_S, LOOP_E) for (auto (LOOP_I) = (LOOP_S); (LOOP_I) < (LOOP_E); (LOOP_I)++)
 
