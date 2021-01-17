@@ -6,6 +6,7 @@ class NASM {
 public:
 
     static string IdToTypeSpecifier(int);
+    static string SizeToTypeSpecifier(unsigned int);
 
     static string ToVar(const string&);
     static string ToFun(const string&);
@@ -58,6 +59,8 @@ public:
 
     static constexpr char const* const PUSH = "push";
     static constexpr char const* const POP = "pop";
+
+    static constexpr const unsigned int DEFAULT_EXP_SIZE = 4;
 
 private:
 

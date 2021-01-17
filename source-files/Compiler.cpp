@@ -76,6 +76,12 @@ void Compiler::Assemble(const char* file_name) {
         }*/
     }
 
+    PushInstruction(NASM::MOV, NASM::A_32, OP_TYPE::REGISTER, "4", OP_TYPE::CONSTANT);
+    PushInstruction(NASM::MOV, NASM::B_32, OP_TYPE::REGISTER, "1", OP_TYPE::CONSTANT);
+    PushInstruction(NASM::LEA, NASM::C_32, OP_TYPE::REGISTER, NASM::ToVar("a"), OP_TYPE::MEMORY);
+    PushInstruction(NASM::MOV, NASM::D_32, OP_TYPE::REGISTER, "1", OP_TYPE::CONSTANT);
+    PushToAsm(NASM::KERNEL_INTERRUPT); NewLineAsm();
+
     PopScope();
     PopStack();
 
@@ -148,7 +154,17 @@ void Compiler::EvalExp() {
                 string op1 = res.top(); res.pop();
                 string op2 = res.top(); res.pop();
 
-                Add(op1, op2);
+                res.push(Add(op2, op1));
+            } else if (op == "-") {
+                string op1 = res.top(); res.pop();
+                string op2 = res.top(); res.pop();
+
+                res.push(Sub(op2, op1));
+            } else if (op == "=") {
+                string op1 = res.top(); res.pop();
+                string op2 = res.top(); res.pop();
+
+                res.push(Equ(op2, op1));
             }
         } else {
             res.push(op);
@@ -159,7 +175,7 @@ void Compiler::EvalExp() {
 }
 
 Compiler::OP_TYPE Compiler::IdentifyOp(const string& str) {
-    if (str[0] == '$') {
+    if (IsTempVar(str)) {
         return OP_TYPE::MEMORY;
     } else if (stack_var_ind.contains(NASM::ToVar(str))) {
         return OP_TYPE::MEMORY;
@@ -168,20 +184,15 @@ Compiler::OP_TYPE Compiler::IdentifyOp(const string& str) {
     }
 }
 
-string Compiler::Add(const string& a, const string& b) {
-    OP_TYPE type_1 = IdentifyOp(a);
-    OP_TYPE type_2 = IdentifyOp(b);
+string Compiler::NewTempVar(unsigned int size) {
+    string var_name = NASM::ToSVar(++temp_var_def);
+    PushVarToStack(var_name, size);
 
-    string out_var_name = NASM::ToSVar(++temp_var_def);
-    string reg = NASM::SizeToReg(4, 'A');
+    return var_name;
+}
 
-    PushVarToStack(out_var_name, 4);
-
-    PushInstruction(NASM::MOV, reg, OP_TYPE::REGISTER, a, type_1);
-    PushInstruction(NASM::ADD, reg, OP_TYPE::REGISTER, b, OP_TYPE::CONSTANT);
-    PushInstruction(NASM::MOV, out_var_name, OP_TYPE::MEMORY, reg, OP_TYPE::CONSTANT);
-
-    return out_var_name;
+bool Compiler::IsTempVar(const string& str) {
+    return str[0] == TEMP_VAR_IDENTIFIER;
 }
 
 void Compiler::PushStack() {
@@ -263,6 +274,14 @@ unsigned int Compiler::GetVarOffsetFromStack(const string& str) {
     return offest;
 }
 
+unsigned int Compiler::GetVarSize(const string& str) {
+    vector <int>* vec_ptr = &stack_var_ind[str];
+    int ind = (*vec_ptr)[vec_ptr->size() - 1];
+    unsigned int size = stack_mem[ind].size;
+
+    return size;
+}
+
 void Compiler::PushInstruction(const string& instr, const string& op1, OP_TYPE t1, const string& op2, OP_TYPE t2, const string& type_specifier) {
     PushToAsm(instr);
 
@@ -330,4 +349,130 @@ void Compiler::SpaceAsm() {
 
 void Compiler::NewLineAsm() {
     out_file << endl;
+}
+
+string Compiler::Add(const string& a, const string& b) {
+    OP_TYPE type1 = IdentifyOp(a);
+    OP_TYPE type2 = IdentifyOp(b);
+
+    string op1 = a;
+    string op2 = b;
+
+    bool tmp1 = IsTempVar(a);
+    bool tmp2 = IsTempVar(b);
+
+    string out_var_name;
+
+    if (type1 == OP_TYPE::MEMORY && !tmp1) op1 = NASM::ToVar(a);
+    if (type2 == OP_TYPE::MEMORY && !tmp2) op2 = NASM::ToVar(b);
+
+    cout << "Adding " << op1 << " and " << op2 << endl;
+
+    if (type1 == OP_TYPE::CONSTANT && type2 == OP_TYPE::CONSTANT) {
+        /*out_var_name = NewTempVar(NASM::DEFAULT_EXP_SIZE);
+        const string type_specifier = NASM::SizeToTypeSpecifier(NASM::DEFAULT_EXP_SIZE);
+
+        PushInstruction(NASM::MOV, out_var_name, OP_TYPE::MEMORY, op1, OP_TYPE::CONSTANT, type_specifier);
+        PushInstruction(NASM::ADD, out_var_name, OP_TYPE::MEMORY, op2, OP_TYPE::CONSTANT, type_specifier);*/
+
+        return to_string(stoi(op1) + stoi(op2));
+    } else if (type1 == OP_TYPE::MEMORY && type2 == OP_TYPE::MEMORY) {
+        unsigned int size = GetVarSize(op1);
+        out_var_name = NewTempVar(size);
+        string reg = NASM::SizeToReg(size, 'A');
+
+        PushInstruction(NASM::MOV, reg, OP_TYPE::REGISTER, op1, OP_TYPE::MEMORY);
+        PushInstruction(NASM::ADD, reg, OP_TYPE::REGISTER, op2, OP_TYPE::MEMORY);
+        PushInstruction(NASM::MOV, out_var_name, OP_TYPE::MEMORY, reg, OP_TYPE::REGISTER);
+    } else {
+        if (type1 == OP_TYPE::CONSTANT && type2 == OP_TYPE::MEMORY) swap(op1, op2);
+
+        unsigned int size = GetVarSize(op1);
+        out_var_name = NewTempVar(size);
+        string reg = NASM::SizeToReg(size, 'A');
+
+        PushInstruction(NASM::MOV, reg, OP_TYPE::REGISTER, op1, OP_TYPE::MEMORY);
+        PushInstruction(NASM::ADD, reg, OP_TYPE::REGISTER, op2, OP_TYPE::CONSTANT);
+        PushInstruction(NASM::MOV, out_var_name, OP_TYPE::MEMORY, reg, OP_TYPE::REGISTER);
+    }
+
+    return out_var_name;
+}
+
+string Compiler::Sub(const string& a, const string& b) {
+    OP_TYPE type1 = IdentifyOp(a);
+    OP_TYPE type2 = IdentifyOp(b);
+
+    string op1 = a;
+    string op2 = b;
+
+    string out_var_name;
+
+    if (type1 == OP_TYPE::MEMORY && !IsTempVar(a)) op1 = NASM::ToVar(a);
+    if (type2 == OP_TYPE::MEMORY && !IsTempVar(b)) op2 = NASM::ToVar(b);
+
+    cout << "Subbing " << op1 << " and " << op2 << endl;
+
+    if (type1 == OP_TYPE::CONSTANT && type2 == OP_TYPE::CONSTANT) {
+        /*out_var_name = NewTempVar(NASM::DEFAULT_EXP_SIZE);
+        const string type_specifier = NASM::SizeToTypeSpecifier(NASM::DEFAULT_EXP_SIZE);
+
+        PushInstruction(NASM::MOV, out_var_name, OP_TYPE::MEMORY, op1, OP_TYPE::CONSTANT, type_specifier);
+        PushInstruction(NASM::SUB, out_var_name, OP_TYPE::MEMORY, op2, OP_TYPE::CONSTANT, type_specifier);*/
+
+        return to_string(stoi(op1) - stoi(op2));
+    } else if (type1 == OP_TYPE::MEMORY && type2 == OP_TYPE::MEMORY) {
+        unsigned int size = GetVarSize(op1);
+        out_var_name = NewTempVar(size);
+        string reg = NASM::SizeToReg(size, 'A');
+
+        PushInstruction(NASM::MOV, reg, OP_TYPE::REGISTER, op1, OP_TYPE::MEMORY);
+        PushInstruction(NASM::SUB, reg, OP_TYPE::REGISTER, op2, OP_TYPE::MEMORY);
+        PushInstruction(NASM::MOV, out_var_name, OP_TYPE::MEMORY, reg, OP_TYPE::REGISTER);
+    } else if (type1 == OP_TYPE::MEMORY && type2 == OP_TYPE::CONSTANT) {
+        unsigned int size = GetVarSize(op1);
+        out_var_name = NewTempVar(size);
+        string reg = NASM::SizeToReg(size, 'A');
+
+        PushInstruction(NASM::MOV, reg, OP_TYPE::REGISTER, op1, OP_TYPE::MEMORY);
+        PushInstruction(NASM::SUB, reg, OP_TYPE::REGISTER, op2, OP_TYPE::CONSTANT);
+        PushInstruction(NASM::MOV, out_var_name, OP_TYPE::MEMORY, reg, OP_TYPE::REGISTER);
+    } else {
+        unsigned int size = GetVarSize(op1);
+        out_var_name = NewTempVar(size);
+        string reg = NASM::SizeToReg(size, 'A');
+
+        PushInstruction(NASM::MOV, reg, OP_TYPE::REGISTER, op1, OP_TYPE::CONSTANT);
+        PushInstruction(NASM::SUB, reg, OP_TYPE::REGISTER, op2, OP_TYPE::MEMORY);
+        PushInstruction(NASM::MOV, out_var_name, OP_TYPE::MEMORY, reg, OP_TYPE::REGISTER);
+    }
+
+    return out_var_name;
+}
+
+string Compiler::Equ(const string& a, const string& b) {
+    OP_TYPE type2 = IdentifyOp(b);
+
+    string op1 = NASM::ToVar(a);
+    string op2 = b;
+
+    if (type2 == OP_TYPE::MEMORY && b[0] != TEMP_VAR_IDENTIFIER) op2 = NASM::ToVar(b);
+
+    cout << "Equing " << op1 << " to " << op2 << endl;
+
+    if (type2 == OP_TYPE::CONSTANT) {
+        unsigned int size = GetVarSize(op1);
+        const string type_specifier = NASM::SizeToTypeSpecifier(size);
+
+        PushInstruction(NASM::MOV, op1, OP_TYPE::MEMORY, op2, OP_TYPE::CONSTANT, type_specifier);
+    } else {
+        unsigned int size = GetVarSize(op1);
+        const string type_specifier = NASM::SizeToTypeSpecifier(size);
+        string reg = NASM::SizeToReg(size, 'A');
+
+        PushInstruction(NASM::MOV, reg, OP_TYPE::REGISTER, op2, OP_TYPE::MEMORY, type_specifier);
+        PushInstruction(NASM::MOV, op1, OP_TYPE::MEMORY, reg, OP_TYPE::REGISTER, type_specifier);
+    }
+
+    return a;
 }

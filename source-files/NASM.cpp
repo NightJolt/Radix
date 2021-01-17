@@ -4,6 +4,12 @@ string NASM::IdToTypeSpecifier(int i) {
     return type_specifiers[i];
 }
 
+string NASM::SizeToTypeSpecifier(unsigned int i) {
+    if (i > 2) i -= 2; else i--;
+
+    return type_specifiers[i];
+}
+
 string NASM::ToVar(const string& str) {
     return "var_" + str;
 }

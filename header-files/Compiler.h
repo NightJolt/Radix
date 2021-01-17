@@ -30,6 +30,7 @@ private:
 
     static void PushVarToStack(const string&, unsigned int);
     static unsigned int GetVarOffsetFromStack(const string&);
+    static unsigned int GetVarSize(const string&);
 
     enum OP_TYPE {
         UNDEFINED,
@@ -46,11 +47,17 @@ private:
     static void SpaceAsm();
     static void NewLineAsm();
 
+    static const char TEMP_VAR_IDENTIFIER = '$';
+
     static void EvalExp();
 
     static OP_TYPE IdentifyOp(const string&);
 
+    static string NewTempVar(unsigned int);
+    static bool IsTempVar(const string&);
+
     static string Add(const string&, const string&);
+    static string Sub(const string&, const string&);
 
     static string Equ(const string&, const string&);
 
