@@ -37,5 +37,5 @@ private:
             "&", "|", "^", "!", ">>", "<<", "~",
             "&=", "|=", "^=", "!=",
             ":"
-    };
+    }; // todo = not working inside expression
 };
