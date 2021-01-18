@@ -19,6 +19,8 @@ string NASM::ToSVar(int i) {
 }
 
 string NASM::ToFun(const string& str) {
+    if (str == Radix::CORE_FUN_NAME) return CORE_FUN_NAME;
+
     return "fun_" + str;
 }
 

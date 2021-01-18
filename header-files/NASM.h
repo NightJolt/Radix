@@ -1,6 +1,7 @@
 #pragma once
 
 #include "globals.h"
+#include "Radix.h"
 
 class NASM {
 public:
@@ -60,6 +61,7 @@ public:
     static constexpr char const* const PUSH = "push";
     static constexpr char const* const POP = "pop";
 
+    static constexpr char const* const CALL = "call";
     static constexpr char const* const RET = "ret";
     static constexpr char const* const FUN_RET_NAME = ".ret:";
     static constexpr char const* const FUN_RET_CALL = "jmp .ret";

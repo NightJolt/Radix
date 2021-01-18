@@ -7,11 +7,10 @@ StringTokenizer Compiler::exp_tokenizer = StringTokenizer(Radix::exp_delims, siz
 
 vector <unsigned int> Compiler::stack_frame = vector <unsigned int> ();
 vector <Compiler::STACK_VAR_DEF> Compiler::stack_mem = vector <STACK_VAR_DEF> ();
+vector <int> Compiler::scope_frame = vector <int> ();
+vector <unsigned int> Compiler::instruction_frame = vector <unsigned int> ();
 
 unordered_map <string, vector <int>> Compiler::stack_var_ind = unordered_map <string, vector <int>> ();
-
-vector <int> Compiler::scope_frame = vector <int> ();
-
 unordered_map <string, Compiler::FUN_DEF> Compiler::funs = unordered_map <string, FUN_DEF> ();
 
 int Compiler::temp_var_def = -1;
@@ -56,7 +55,11 @@ void Compiler::DefBuiltinFuns() {
 }
 
 void Compiler::DefBuiltinExit() {
-    PushToAsm("exit:"); NewLineAsm();
+    string fun_name;
+
+    fun_name = NASM::ToFun("exit");
+    funs[fun_name] = {};
+    PushToAsm(fun_name+ ":"); NewLineAsm();
     PushInstruction(NASM::MOV, NASM::A_32, OP_TYPE::REGISTER, "1", OP_TYPE::CONSTANT);
     PushToAsm(NASM::KERNEL_INTERRUPT); NewLineAsm();
 }
@@ -71,7 +74,7 @@ void Compiler::TokenizeCodeIntoInstructions(ifstream& file) {
 
     while (getline(file, line)) {
         if (!line.empty())
-            code.append(" "),
+            line.append(" "),
             code += line;
     }
 
@@ -79,7 +82,7 @@ void Compiler::TokenizeCodeIntoInstructions(ifstream& file) {
 }
 
 void Compiler::ProcessInstrcution(const string& str) {
-    exp_tokenizer.Clear(); // Remove
+    exp_tokenizer.Clear();
     exp_tokenizer.Process(str);
 
     string first_token = exp_tokenizer.NextTokenUnpopped();
@@ -106,19 +109,18 @@ void Compiler::ProcessInstrcution(const string& str) {
         if (exp_tokenizer.TokensLeft()) exp_tokenizer.Pop(); // extra : for simplicity
 
         FUN_DEF fd;
-        fd.name = fun_name;
 
         while (exp_tokenizer.TokensCount()) {
             string type_name = exp_tokenizer.NextToken();
             string var_name = exp_tokenizer.NextToken();
 
-            fun_name += "_" + type_name;
+            //fun_name += "_" + type_name;
 
             fd.arg_sizes.push_back(Data::TypeSpecifierSize(Radix::TypeSpecifierToId(type_name)));
             fd.arg_names.push_back(var_name);
-        }
 
-        if (fun_name == NASM::ToFun(Radix::CORE_FUN_NAME)) fun_name = NASM::CORE_FUN_NAME;
+            if (exp_tokenizer.TokensLeft()) exp_tokenizer.Pop(); // extra , for simplicity
+        }
 
         if (!funs.contains(fun_name)) funs[fun_name] = fd;
 
@@ -156,10 +158,6 @@ string Compiler::NewTempVar(unsigned int size) {
     PushVarToStack(var_name, size);
 
     return var_name;
-}
-
-bool Compiler::IsTempVar(const string& str) {
-    return str[0] == TEMP_VAR_IDENTIFIER;
 }
 
 void Compiler::PushStack() {
@@ -260,11 +258,25 @@ unsigned int Compiler::GetVarSize(const string& str) {
 
 #pragma region ASSEMBLER
 
+bool Compiler::IsTempVar(const string& str) {
+    return str[0] == TEMP_VAR_IDENTIFIER;
+}
+
+bool Compiler::IsVar(const string& str) {
+    return stack_var_ind.contains(NASM::ToVar(str));
+}
+
+bool Compiler::IsFun(const string& str) {
+    return funs.contains(NASM::ToFun(str));
+}
+
 Compiler::OP_TYPE Compiler::IdentifyOp(const string& str) {
     if (IsTempVar(str)) {
         return OP_TYPE::MEMORY;
-    } else if (stack_var_ind.contains(NASM::ToVar(str))) {
+    } else if (IsVar(str)) {
         return OP_TYPE::MEMORY;
+    }  else if (IsFun(str)) {
+        return OP_TYPE::INSTRUCTION;
     } else {
         return OP_TYPE::CONSTANT;
     }
@@ -350,6 +362,9 @@ void Compiler::EvalExp() {
 
     LOOP(i, 0, exp.size()) {
         const string& op = exp[i];
+
+        if (op == ",") continue;
+
         int ip_ind = Radix::GetOperatorId(op);
 
         if (ip_ind != -1) {
@@ -368,6 +383,14 @@ void Compiler::EvalExp() {
                 string op2 = res.top(); res.pop();
 
                 res.push(Equ(op2, op1));
+            } else if (op == ":") {
+                vector <string> args;
+
+                while (!IsFun(res.top())) {
+                    args.push_back(res.top()); res.pop();
+                }
+
+                res.push(Call(res.top())); res.pop();
             }
         } else {
             res.push(op);
@@ -510,6 +533,13 @@ string Compiler::Equ(const string& a, const string& b) {
         PushInstruction(NASM::MOV, reg, OP_TYPE::REGISTER, op2, OP_TYPE::MEMORY, type_specifier);
         PushInstruction(NASM::MOV, op1, OP_TYPE::MEMORY, reg, OP_TYPE::REGISTER, type_specifier);
     }
+
+    return a;
+}
+
+string Compiler::Call(const string& a) {
+    PushToAsm(NASM::CALL); SpaceAsm();
+    PushToAsm(NASM::ToFun(a)); NewLineAsm();
 
     return a;
 }

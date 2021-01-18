@@ -31,6 +31,7 @@ private:
     static void PushVarToStack(const string&, unsigned int);
     static unsigned int GetVarOffsetFromStack(const string&);
     static unsigned int GetVarSize(const string&);
+    //static unsigned int GetOpSize(const string&);
 
     static void DefBuiltinFuns();
     static void DefBuiltinExit();
@@ -39,7 +40,8 @@ private:
         UNDEFINED,
         REGISTER,
         MEMORY,
-        CONSTANT
+        CONSTANT,
+        INSTRUCTION
     };
 
     static void PushInstruction(const string&, const string&, OP_TYPE, const string&, OP_TYPE, const string& = "");
@@ -50,6 +52,10 @@ private:
     static void SpaceAsm();
     static void NewLineAsm();
 
+    static bool IsTempVar(const string&);
+    static bool IsVar(const string&);
+    static bool IsFun(const string&);
+
     static const char TEMP_VAR_IDENTIFIER = '@';
 
     static void EvalExp();
@@ -57,12 +63,11 @@ private:
     static OP_TYPE IdentifyOp(const string&);
 
     static string NewTempVar(unsigned int);
-    static bool IsTempVar(const string&);
 
     static string Add(const string&, const string&);
     static string Sub(const string&, const string&);
-
     static string Equ(const string&, const string&);
+    static string Call(const string&); //todo add args
 
     static ofstream out_file;
 
@@ -77,8 +82,6 @@ private:
     };*/
 
     struct FUN_DEF {
-        string name;
-
         vector <unsigned int> arg_sizes;
         vector <string> arg_names;
     };
