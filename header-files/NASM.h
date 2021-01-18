@@ -60,7 +60,13 @@ public:
     static constexpr char const* const PUSH = "push";
     static constexpr char const* const POP = "pop";
 
+    static constexpr char const* const RET = "ret";
+    static constexpr char const* const FUN_RET_NAME = ".ret:";
+    static constexpr char const* const FUN_RET_CALL = "jmp .ret";
+
     static constexpr const unsigned int DEFAULT_EXP_SIZE = 4;
+
+    static constexpr char const* const CORE_FUN_NAME = "_start";
 
 private:
 

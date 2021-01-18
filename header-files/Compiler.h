@@ -26,11 +26,14 @@ private:
     static void PopScope();
 
     static void AllocStack(unsigned int);
-    static void FreeStack(unsigned int);
+    static void FreeStack(unsigned int, bool = true);
 
     static void PushVarToStack(const string&, unsigned int);
     static unsigned int GetVarOffsetFromStack(const string&);
     static unsigned int GetVarSize(const string&);
+
+    static void DefBuiltinFuns();
+    static void DefBuiltinExit();
 
     enum OP_TYPE {
         UNDEFINED,
@@ -47,7 +50,7 @@ private:
     static void SpaceAsm();
     static void NewLineAsm();
 
-    static const char TEMP_VAR_IDENTIFIER = '$';
+    static const char TEMP_VAR_IDENTIFIER = '@';
 
     static void EvalExp();
 
@@ -68,10 +71,19 @@ private:
 
     static StringTokenizer exp_tokenizer;
 
-    struct GLOB_VAR_DEF {
+    /*struct GLOB_VAR_DEF {
         string name;
         int size;
+    };*/
+
+    struct FUN_DEF {
+        string name;
+
+        vector <unsigned int> arg_sizes;
+        vector <string> arg_names;
     };
+
+    static unordered_map <string, FUN_DEF> funs;
 
     struct STACK_VAR_DEF {
         unsigned int size;

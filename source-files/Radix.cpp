@@ -20,8 +20,8 @@ int Radix::ScopeToId(const string& str) {
     return -1;
 }
 
-bool Radix::IsFunSpecifier(const string& str) {
-    return str == "fun";
+Radix::FUN_DEF_TYPE Radix::FunDefType(const string& str) {
+    return str == "fun" ? FUN_DEF_TYPE::FUN : str == "fundef" ? FUN_DEF_TYPE::FUNDEF : FUN_DEF_TYPE::NONE;
 }
 
 int Radix::GetOperatorId(const string& str) {
@@ -32,4 +32,8 @@ int Radix::GetOperatorId(const string& str) {
     }
 
     return -1;
+}
+
+bool Radix::IsRet(const string& str) {
+    return str == "ret";
 }

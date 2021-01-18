@@ -5,10 +5,17 @@
 class Radix {
 public:
 
+    enum FUN_DEF_TYPE {
+        NONE,
+        FUN,
+        FUNDEF
+    };
+
     static int TypeSpecifierToId(const string&);
     static int ScopeToId(const string&);
-    static bool IsFunSpecifier(const string&);
+    static FUN_DEF_TYPE FunDefType(const string&);
     static int GetOperatorId(const string&);
+    static bool IsRet(const string&);
 
     static constexpr char const* const exp_delims[] = {
             "=",
@@ -21,6 +28,8 @@ public:
             ":",
             " ", "(", ")" // extra line
     };
+
+    static constexpr char const* const CORE_FUN_NAME = "start";
 
 private:
 
@@ -37,5 +46,5 @@ private:
             "&", "|", "^", "!", ">>", "<<", "~",
             "&=", "|=", "^=", "!=",
             ":"
-    }; // todo = not working inside expression
+    }; // todo right to left associativity
 };

@@ -15,7 +15,7 @@ string NASM::ToVar(const string& str) {
 }
 
 string NASM::ToSVar(int i) {
-    return "$" + to_string(i);
+    return "@tmp" + to_string(i);
 }
 
 string NASM::ToFun(const string& str) {
