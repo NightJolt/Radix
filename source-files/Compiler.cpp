@@ -6,14 +6,16 @@ StringTokenizer Compiler::instruct_tokenizer = StringTokenizer(instruct_delims, 
 StringTokenizer Compiler::exp_tokenizer = StringTokenizer(Radix::exp_delims, sizeof Radix::exp_delims / sizeof *Radix::exp_delims, true, StringTokenizer::LAST_TO_FIT);
 
 vector <unsigned int> Compiler::stack_frame = vector <unsigned int> ();
-vector <Compiler::STACK_VAR_DEF> Compiler::stack_mem = vector <STACK_VAR_DEF> ();
-vector <int> Compiler::scope_frame = vector <int> ();
-vector <unsigned int> Compiler::instruction_frame = vector <unsigned int> ();
-
-unordered_map <string, vector <int>> Compiler::stack_var_ind = unordered_map <string, vector <int>> ();
-unordered_map <string, Compiler::FUN_DEF> Compiler::funs = unordered_map <string, FUN_DEF> ();
+vector <Compiler::VAR_STACK> Compiler::stack_mem = vector <VAR_STACK> ();
+vector <Compiler::SCOPE> Compiler::scope_frame = vector <SCOPE> ();
+unordered_map <string, vector <int>> Compiler::local_var_defs = unordered_map <string, vector <int>> ();
+unordered_map <string, Compiler::FUN_DEF> Compiler::fun_defs = unordered_map <string, FUN_DEF> ();
+vector <Compiler::STRUCT_DEF> Compiler::struct_defs = vector <STRUCT_DEF> ();
 
 int Compiler::temp_var_def = -1;
+int Compiler::anon_fun_def = -1;
+
+Compiler::SCOPE Compiler::next_scope_params = SCOPE();
 
 void Compiler::Init(const char* file_name) {
     out_file.open(file_name);
@@ -27,7 +29,7 @@ void Compiler::Assemble(const char* file_name) {
     PushToAsm(NASM::LOGIC_SEGMENT); NewLineAsm();
     PushToAsm(NASM::CORE_FUNCTION_CALL); NewLineAsm();
 
-    DefBuiltinFuns();
+    //DefBuiltinFuns();
 
     while (instruct_tokenizer.TokensLeft()) {
         ProcessInstrcution(instruct_tokenizer.NextToken());
@@ -50,7 +52,7 @@ void Compiler::Assemble(const char* file_name) {
 
 #pragma region BUILTIN_FUNCTIONS
 
-void Compiler::DefBuiltinFuns() {
+/*void Compiler::DefBuiltinFuns() {
     DefBuiltinExit();
 }
 
@@ -62,7 +64,7 @@ void Compiler::DefBuiltinExit() {
     PushToAsm(fun_name+ ":"); NewLineAsm();
     PushInstruction(NASM::MOV, NASM::A_32, OP_TYPE::REGISTER, "1", OP_TYPE::CONSTANT);
     PushToAsm(NASM::KERNEL_INTERRUPT); NewLineAsm();
-}
+}*/
 
 #pragma endregion
 
@@ -98,52 +100,76 @@ void Compiler::ProcessInstrcution(const string& str) {
         return;
     }
 
-    Radix::FUN_DEF_TYPE fdt = Radix::FunDefType(first_token);
-    int type_specifier_id = Radix::TypeSpecifierToId(first_token);
+#pragma region fun_def
 
-    if (fdt) {
+    int scope_attr_id;
+    next_scope_params.reset(); // { "fun", "type", "if", "loop" };
+    FUN_DEF fun;
+
+    while (true) {
+        // todo maybe simplify
+        if ((scope_attr_id = Radix::GetScopeAttrId(exp_tokenizer.NextTokenUnpopped())) == -1) break;
+
         exp_tokenizer.Pop();
 
-        string fun_name = NASM::ToFun(exp_tokenizer.NextToken());
+        if (scope_attr_id == 0) {
+            next_scope_params.is_fun = true;
 
-        if (exp_tokenizer.TokensLeft()) exp_tokenizer.Pop(); // extra : for simplicity
+            string fun_label = exp_tokenizer.NextToken();
 
-        FUN_DEF fd;
+            if (!fun_defs.contains(fun_label)) fun_defs[fun_label] = fun;
+            next_scope_params.label = NASM::ToFun(fun_label);
 
-        while (exp_tokenizer.TokensCount()) {
-            string type_name = exp_tokenizer.NextToken();
-            string var_name = exp_tokenizer.NextToken();
+            if (exp_tokenizer.TokensLeft() && Radix::GetScopeAttrId(exp_tokenizer.NextTokenUnpopped()) == -1)
+                exp_tokenizer.Pop(); // ":"
 
-            //fun_name += "_" + type_name;
+            while (exp_tokenizer.TokensLeft()) {
+                if (Radix::GetScopeAttrId(exp_tokenizer.NextTokenUnpopped()) != -1) break;
 
-            fd.arg_sizes.push_back(Data::TypeSpecifierSize(Radix::TypeSpecifierToId(type_name)));
-            fd.arg_names.push_back(var_name);
+                fun.arg_types.push_back(ToType(exp_tokenizer.NextToken()));
+                fun.arg_names.push_back(NASM::ToFun(exp_tokenizer.NextToken()));
 
-            if (exp_tokenizer.TokensLeft()) exp_tokenizer.Pop(); // extra , for simplicity
+                if (exp_tokenizer.TokensLeft() && Radix::GetScopeAttrId(exp_tokenizer.NextTokenUnpopped()) == -1)
+                    exp_tokenizer.Pop(); // ","
+            }
+        } else if (scope_attr_id == 1) {
+            exp_tokenizer.Pop(); // ":"
+
+            fun.ret_type = ToType(exp_tokenizer.NextToken());
+        } else if (scope_attr_id == 2) {
+            exp_tokenizer.Pop(); // ":"
+
+            while (exp_tokenizer.TokensLeft()) {
+                if (Radix::GetScopeAttrId(exp_tokenizer.NextTokenUnpopped()) != -1) break;
+
+                next_scope_params.condition += exp_tokenizer.NextToken();
+            }
+        } else if (scope_attr_id == 3) {
+            next_scope_params.loop = true;
         }
 
-        if (!funs.contains(fun_name)) funs[fun_name] = fd;
+        if (!exp_tokenizer.TokensLeft()) return;
+    }
 
-        if (fdt == Radix::FUN_DEF_TYPE::FUN) {
-            PushToAsm(fun_name + ":"); NewLineAsm();
-        }
-    } else if (type_specifier_id != -1) {
+#pragma endregion
+
+    VAR_TYPE type_specifier = ToType(first_token);
+
+    if (type_specifier.cluster != TYPE_CLUSTER::VOID) {
         exp_tokenizer.Pop();
 
-        unsigned int size = Data::TypeSpecifierSize(type_specifier_id);
-        string var_name = NASM::ToVar(exp_tokenizer.NextTokenUnpopped());
+        VAR_DEF vd;
+        vd.SetType(type_specifier);
 
-        PushVarToStack(var_name, size);
+        PushVarToStack(exp_tokenizer.NextTokenUnpopped(), vd);
 
         if (exp_tokenizer.TokensCount() > 1) {
             EvalExp();
         } else {
             exp_tokenizer.Pop();
         }
-    } if (Radix::IsRet(first_token)) {
-        FreeStack(stack_frame.back(), false);
-
-        PushToAsm(NASM::FUN_RET_CALL); NewLineAsm();
+    } else if (first_token == "ret") {
+        Ret();
     } else {
         EvalExp();
     }
@@ -151,11 +177,64 @@ void Compiler::ProcessInstrcution(const string& str) {
 
 #pragma endregion
 
+#pragma region VARIABLE_TYPES
+
+Compiler::VAR_TYPE Compiler::ToType(const string& str) {
+    VAR_TYPE vt;
+
+    vt.type_id = Radix::GetPrimitiveId(str);
+
+    if (vt.type_id != -1) {
+        vt.cluster = TYPE_CLUSTER::PRIMITIVE;
+    } else {
+        vt.cluster = TYPE_CLUSTER::COMPLEX;
+        vt.type_id = GetStructId(str);
+
+        if (vt.type_id == -1) {
+            vt.cluster = TYPE_CLUSTER::VOID;
+        }
+    }
+
+    return vt;
+}
+
+unsigned int Compiler::GetTypeSize(const VAR_TYPE& vt) {
+    if (vt.cluster == TYPE_CLUSTER::PRIMITIVE) {
+        return Data::GetPrimitiveSize(vt.type_id);
+    } else {
+        return GetStructById(vt.type_id).size;
+    }
+}
+
+int Compiler::GetStructId(const string& str) {
+    LOOP(i, 0, struct_defs.size()) {
+        if (str == struct_defs[i].label) return i;
+    }
+
+    return -1;
+}
+
+Compiler::STRUCT_DEF& Compiler::GetStructById(int i) {
+    return struct_defs[i];
+}
+
+
+#pragma endregion
+
 #pragma region MEMORY
 
 string Compiler::NewTempVar(unsigned int size) {
-    string var_name = NASM::ToSVar(++temp_var_def);
-    PushVarToStack(var_name, size);
+    string var_name = NASM::ToTempVar(++temp_var_def);
+
+    VAR_DEF vd;
+    VAR_TYPE vt;
+
+    vt.type_id = Data::SizeToId(size);
+    vt.cluster = TYPE_CLUSTER::PRIMITIVE;
+
+    vd.SetType(vt);
+
+    PushVarToStack(var_name, vd);
 
     return var_name;
 }
@@ -168,7 +247,6 @@ void Compiler::PushStack() {
 }
 
 void Compiler::PopStack() {
-    PushToAsm(NASM::FUN_RET_NAME); NewLineAsm();
     PushInstruction(NASM::POP, NASM::BASE_POINTER_32, OP_TYPE::REGISTER, "", OP_TYPE::UNDEFINED);
     PushToAsm(NASM::RET); NewLineAsm();
 
@@ -176,28 +254,40 @@ void Compiler::PopStack() {
 }
 
 void Compiler::PushScope() {
-    if (scope_frame.empty()) PushStack();
+    if (next_scope_params.is_fun) {
+        PushToAsm(next_scope_params.label + ":"); NewLineAsm();
 
-    scope_frame.push_back(0);
+        PushStack();
+    } else {
+        next_scope_params.label = NASM::ToAnon(++anon_fun_def);
+
+        PushToAsm("." + next_scope_params.label + ":"); NewLineAsm();
+    }
+
+    scope_frame.push_back(next_scope_params);
 }
 
 void Compiler::PopScope() {
-    int cnt = scope_frame.back();
-    scope_frame.pop_back();
+    SCOPE& scope = scope_frame.back();
+    int cnt = scope.vars_defined;
 
     unsigned int mem_freed = 0;
 
     while (cnt--) {
-        const STACK_VAR_DEF& svd = stack_mem[stack_mem.size() - 1];
+        const VAR_STACK& vs = stack_mem[stack_mem.size() - 1];
 
-        mem_freed += svd.size;
-        svd.target_vec->pop_back();
+        mem_freed += vs.var.size;
+        vs.target_vec->pop_back();
         stack_mem.pop_back();
     }
 
     FreeStack(mem_freed);
 
-    if (scope_frame.empty()) PopStack();
+    PushToAsm(NASM::ToFunRet(scope.label) + ":"); NewLineAsm();
+
+    scope_frame.pop_back();
+
+    if (scope.is_fun) PopStack();
 }
 
 void Compiler::AllocStack(unsigned int size) {
@@ -214,32 +304,44 @@ void Compiler::FreeStack(unsigned int size, bool free_stack_frame) {
     PushInstruction(NASM::ADD, NASM::STACK_POINTER_32, OP_TYPE::REGISTER, to_string(size), OP_TYPE::CONSTANT);
 }
 
-void Compiler::PushVarToStack(const string& str, unsigned int size) {
-    if (stack_frame.empty()) {
-        // todo Push to globals
-    } else {
-        AllocStack(size);
+void Compiler::Ret() {
+    FreeStack(stack_frame.back(), false); // todo mix of break and return wtf
 
-        scope_frame[scope_frame.size() - 1]++;
+    for (int i = (int)scope_frame.size() - 1; i >= 0; i--) {
+        if (scope_frame[i].is_fun) {
+            PushToAsm("jmp " + NASM::ToFunRet(scope_frame[i].label)); NewLineAsm();
 
-        if (!stack_var_ind.contains(str)) {
-            stack_var_ind[str] = vector <int> ();
+            break;
         }
-
-        STACK_VAR_DEF svd = {};
-
-        svd.size = size;
-        svd.offset = stack_frame[stack_frame.size() - 1];
-        svd.target_vec = &stack_var_ind[str];
-
-        svd.target_vec->push_back(stack_mem.size());
-
-        stack_mem.push_back(svd);
     }
 }
 
-unsigned int Compiler::GetVarOffsetFromStack(const string& str) {
-    vector <int>* vec_ptr = &stack_var_ind[str];
+void Compiler::PushVarToStack(const string& str, const VAR_DEF& vd) {
+    if (stack_frame.empty()) {
+        // todo Push to globals
+    } else {
+        AllocStack(vd.size);
+
+        scope_frame[scope_frame.size() - 1].vars_defined++;
+
+        if (!local_var_defs.contains(str)) {
+            local_var_defs[str] = vector <int> ();
+        }
+
+        VAR_STACK vs = {};
+
+        vs.var = vd;
+        vs.offset = stack_frame[stack_frame.size() - 1];
+        vs.target_vec = &local_var_defs[str];
+
+        vs.target_vec->push_back(stack_mem.size());
+
+        stack_mem.push_back(vs);
+    }
+}
+
+unsigned int Compiler::GetVarOffset(const string& str) {
+    vector <int>* vec_ptr = &local_var_defs[str];
     int ind = (*vec_ptr)[vec_ptr->size() - 1];
     unsigned int offest = stack_mem[ind].offset;
 
@@ -247,9 +349,9 @@ unsigned int Compiler::GetVarOffsetFromStack(const string& str) {
 }
 
 unsigned int Compiler::GetVarSize(const string& str) {
-    vector <int>* vec_ptr = &stack_var_ind[str];
+    vector <int>* vec_ptr = &local_var_defs[str];
     int ind = (*vec_ptr)[vec_ptr->size() - 1];
-    unsigned int size = stack_mem[ind].size;
+    unsigned int size = stack_mem[ind].var.size;
 
     return size;
 }
@@ -263,11 +365,11 @@ bool Compiler::IsTempVar(const string& str) {
 }
 
 bool Compiler::IsVar(const string& str) {
-    return stack_var_ind.contains(NASM::ToVar(str));
+    return local_var_defs.contains(str);
 }
 
 bool Compiler::IsFun(const string& str) {
-    return funs.contains(NASM::ToFun(str));
+    return fun_defs.contains(str);
 }
 
 Compiler::OP_TYPE Compiler::IdentifyOp(const string& str) {
@@ -275,8 +377,6 @@ Compiler::OP_TYPE Compiler::IdentifyOp(const string& str) {
         return OP_TYPE::MEMORY;
     } else if (IsVar(str)) {
         return OP_TYPE::MEMORY;
-    }  else if (IsFun(str)) {
-        return OP_TYPE::INSTRUCTION;
     } else {
         return OP_TYPE::CONSTANT;
     }
@@ -317,7 +417,7 @@ void Compiler::PushOperand(const string& op, OP_TYPE t) {
     } else if (t == OP_TYPE::REGISTER) {
         PushToAsm(op);
     }else if (t == OP_TYPE::MEMORY) {
-        unsigned int offset = GetVarOffsetFromStack(op);
+        unsigned int offset = GetVarOffset(op);
 
         string str;
 
@@ -355,7 +455,7 @@ void Compiler::NewLineAsm() {
 
 #pragma region EXPRESSION
 
-void Compiler::EvalExp() {
+string Compiler::EvalExp() {
     vector <string> exp = Expression::InfixToPostfix(exp_tokenizer);
 
     stack <string> res;
@@ -390,7 +490,17 @@ void Compiler::EvalExp() {
                     args.push_back(res.top()); res.pop();
                 }
 
-                res.push(Call(res.top())); res.pop();
+                string fun_name = res.top(); res.pop();
+
+                res.push(Call(fun_name));
+            } else if (op == "?") {
+                string op1 = res.top(); res.pop();
+
+                res.push(Deref(op1));
+            } else if (op == "$") {
+                string op1 = res.top(); res.pop();
+
+                res.push(Ref(op1));
             }
         } else {
             res.push(op);
@@ -398,6 +508,8 @@ void Compiler::EvalExp() {
     }
 
     temp_var_def = -1;
+
+    return res.top();
 }
 
 string Compiler::Add(const string& a, const string& b) {
@@ -442,7 +554,7 @@ string Compiler::Add(const string& a, const string& b) {
         if (tmp1) {
             unsigned int size = GetVarSize(op1);
             out_var_name = op1;
-            const string type_specifier = NASM::SizeToTypeSpecifier(size);
+            const string type_specifier = NASM::IdToType(Data::SizeToId(size));
 
             PushInstruction(NASM::ADD, op1, OP_TYPE::MEMORY, op2, OP_TYPE::CONSTANT, type_specifier);
         } else {
@@ -513,35 +625,56 @@ string Compiler::Sub(const string& a, const string& b) {
 string Compiler::Equ(const string& a, const string& b) {
     OP_TYPE type2 = IdentifyOp(b);
 
-    string op1 = NASM::ToVar(a);
-    string op2 = b;
-
-    if (type2 == OP_TYPE::MEMORY && b[0] != TEMP_VAR_IDENTIFIER) op2 = NASM::ToVar(b);
-
     //PushToAsm(";Equ "  + op1 + " " + op2); NewLineAsm();
 
     if (type2 == OP_TYPE::CONSTANT) {
-        unsigned int size = GetVarSize(op1);
-        const string type_specifier = NASM::SizeToTypeSpecifier(size);
+        unsigned int size = GetVarSize(a);
+        const string type_specifier = NASM::IdToType(Data::SizeToId(size));
 
-        PushInstruction(NASM::MOV, op1, OP_TYPE::MEMORY, op2, OP_TYPE::CONSTANT, type_specifier);
+        PushInstruction(NASM::MOV, a, OP_TYPE::MEMORY, b, OP_TYPE::CONSTANT, type_specifier);
     } else {
-        unsigned int size = GetVarSize(op1);
-        const string type_specifier = NASM::SizeToTypeSpecifier(size);
+        unsigned int size = GetVarSize(a);
+        const string type_specifier = NASM::IdToType(Data::SizeToId(size));
         string reg = NASM::SizeToReg(size, 'A');
 
-        PushInstruction(NASM::MOV, reg, OP_TYPE::REGISTER, op2, OP_TYPE::MEMORY, type_specifier);
-        PushInstruction(NASM::MOV, op1, OP_TYPE::MEMORY, reg, OP_TYPE::REGISTER, type_specifier);
+        PushInstruction(NASM::MOV, reg, OP_TYPE::REGISTER, b, OP_TYPE::MEMORY, type_specifier);
+        PushInstruction(NASM::MOV, a, OP_TYPE::MEMORY, reg, OP_TYPE::REGISTER, type_specifier);
     }
 
     return a;
+}
+
+string Compiler::Deref(const string& a) {
+    /*const unsigned int size = 4;
+    string out_var_name = NewTempVar(size);
+    string reg = NASM::SizeToReg(size, 'A');
+
+    string op1 = NASM::ToVar(a);
+
+    PushInstruction(NASM::LEA, reg, OP_TYPE::REGISTER, op1, OP_TYPE::MEMORY);
+    PushInstruction(NASM::MOV, out_var_name, OP_TYPE::MEMORY, reg, OP_TYPE::REGISTER);*/
+
+    return "0";
+}
+
+string Compiler::Ref(const string& a) {
+    const unsigned int size = 4;
+    string out_var_name = NewTempVar(size);
+    string reg = NASM::SizeToReg(size, 'A');
+
+    string op1 = NASM::ToVar(a);
+
+    PushInstruction(NASM::LEA, reg, OP_TYPE::REGISTER, op1, OP_TYPE::MEMORY);
+    PushInstruction(NASM::MOV, out_var_name, OP_TYPE::MEMORY, reg, OP_TYPE::REGISTER);
+
+    return out_var_name;
 }
 
 string Compiler::Call(const string& a) {
     PushToAsm(NASM::CALL); SpaceAsm();
     PushToAsm(NASM::ToFun(a)); NewLineAsm();
 
-    return a;
+    return "0"; // todo its only temp
 }
 
 #pragma endregion

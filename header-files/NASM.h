@@ -6,15 +6,16 @@
 class NASM {
 public:
 
-    static string IdToTypeSpecifier(int);
-    static string SizeToTypeSpecifier(unsigned int);
-
     static string ToVar(const string&);
+    static string ToTempVar(int);
     static string ToFun(const string&);
-
-    static string ToSVar(int);
+    static string ToAnon(int);
+    static string ToFunRet(const string&);
 
     static string SizeToReg(unsigned int, char, char = 'L');
+    static string IdToType(int);
+
+    static constexpr const unsigned int DEFAULT_EXP_SIZE = 4;
 
     static constexpr char const* const LOGIC_SEGMENT = "segment .text";
     static constexpr char const* const CONSTANT_SEGMENT = "segment .bss";
@@ -63,10 +64,6 @@ public:
 
     static constexpr char const* const CALL = "call";
     static constexpr char const* const RET = "ret";
-    static constexpr char const* const FUN_RET_NAME = ".ret:";
-    static constexpr char const* const FUN_RET_CALL = "jmp .ret";
-
-    static constexpr const unsigned int DEFAULT_EXP_SIZE = 4;
 
     static constexpr char const* const CORE_FUN_NAME = "_start";
 

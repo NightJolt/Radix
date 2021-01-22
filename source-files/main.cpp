@@ -28,6 +28,14 @@ int main(int arg_cnt, char** arg_vec) {
         }
     }
 
+    /*StringTokenizer st(Radix::exp_delims, sizeof Radix::exp_delims / sizeof *Radix::exp_delims, true, StringTokenizer::LAST_TO_FIT);
+    st.Process("b = a$ + (wtf:);");
+    vector <string> exp = Expression::InfixToPostfix(st);
+
+    LOOP(i, 0, exp.size()) {
+        cout << exp[i] << " ";
+    } cout << endl;*/
+
     Preprocessor::Init(project_path, "out.prad");
     Preprocessor::ProcessFile(main_file);
     Preprocessor::Term();

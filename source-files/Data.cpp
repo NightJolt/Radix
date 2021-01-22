@@ -1,9 +1,13 @@
 #include "Data.h"
 
-unsigned int Data::TypeSpecifierSize(int i) {
-    return type_sizes[i];
+int Data::SizeToId(unsigned int i) {
+    return i > 2 ? (int)i - 2 : (int)i - 1;
 }
 
-int Data::GetOperatorPrecedence(int i) {
-    return operator_precedence[i];
+unsigned int Data::GetPrimitiveSize(int id) {
+    return primitives[id];
+}
+
+int Data::GetOperatorPrecedence(int id) {
+    return operator_precedence[id];
 }

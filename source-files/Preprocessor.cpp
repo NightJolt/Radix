@@ -1,7 +1,5 @@
 #include "Preprocessor.h"
 
-#include <utility>
-
 string Preprocessor::main_path = string();
 ofstream Preprocessor::out_file = ofstream();
 

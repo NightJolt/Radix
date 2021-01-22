@@ -17,6 +17,7 @@
 
 using namespace std;
 
+/*
 template <typename T>
 std::ostream& operator <<(std::ostream& out, const vector <T>& v) {
     LOOP(i, 0, v.size()) {
@@ -76,3 +77,4 @@ struct SuffixData {
     char* pat;
     vector <int> lps;
 };
+ */

@@ -4,13 +4,13 @@
 
 class Data {
 public:
-
-    static unsigned int TypeSpecifierSize(int);
+    static int SizeToId(unsigned int);
+    static unsigned int GetPrimitiveSize(int);
     static int GetOperatorPrecedence(int);
 
 private:
 
-    static constexpr const unsigned int type_sizes[] = { 1, 2, 4 };
+    static constexpr const unsigned int primitives[] = { 1, 2, 4 };
 
     static constexpr const int operator_precedence[] = {
             2,
@@ -20,6 +20,7 @@ private:
             4, 3,
             7, 5, 6, 15, 11, 11, 15,
             2, 2, 2, 2,
-            0, 1
+            0, 1,
+            15, 15, 16
     };
 };
