@@ -54,8 +54,9 @@ private:
     static string Add(const string&, const string&);
     static string Sub(const string&, const string&);
     static string Equ(const string&, const string&);
-    static string Deref(const string&);
+    //static string Deref(const string&);
     static string Ref(const string&);
+    static string MemAcc(const string&, const string&);
     static string Call(const string&); //todo add args
 
     static StringTokenizer exp_tokenizer;
@@ -79,7 +80,7 @@ private:
     };
 
     struct VAR_DEF {
-        unsigned int size;
+        unsigned int size = 0;
         VAR_TYPE type;
 
         void SetType(const VAR_TYPE& vt) {
@@ -104,18 +105,19 @@ private:
      */
 
     struct STRUCT_DEF {
-        unsigned int size;
+        unsigned int size = 0;
         string label;
 
-        vector <string> var_name;
         vector <VAR_TYPE> var_type;
+        vector <string> var_name;
+        vector <unsigned int> offset;
     };
 
     static vector <STRUCT_DEF> struct_defs;
 
+    static unsigned int GetStructOffset(int, const string&);
     static int GetStructId(const string&);
     static STRUCT_DEF& GetStructById(int);
-    //static STRUCT_DEF& GetStructByLabel(const string&);
 
 #pragma endregion
 

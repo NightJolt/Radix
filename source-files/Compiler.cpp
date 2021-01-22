@@ -100,6 +100,32 @@ void Compiler::ProcessInstrcution(const string& str) {
         return;
     }
 
+    if (first_token == "struct") {
+        exp_tokenizer.Pop();
+
+        STRUCT_DEF sd;
+        sd.label = exp_tokenizer.NextToken();
+
+        exp_tokenizer.Pop(); // ":"
+
+        while (exp_tokenizer.TokensLeft()) {
+            VAR_TYPE vt = ToType(exp_tokenizer.NextToken());
+
+            sd.offset.emplace_back(sd.size);
+            sd.size += GetTypeSize(vt);
+            sd.var_type.emplace_back(vt);
+            sd.var_name.emplace_back(exp_tokenizer.NextToken());
+
+            if (exp_tokenizer.TokensLeft()) exp_tokenizer.Pop(); // ","
+        }
+
+        if (GetStructId(sd.label) == -1) {
+            struct_defs.push_back(sd);
+        }
+
+        return;
+    }
+
 #pragma region fun_def
 
     int scope_attr_id;
@@ -206,6 +232,12 @@ unsigned int Compiler::GetTypeSize(const VAR_TYPE& vt) {
     }
 }
 
+unsigned int Compiler::GetStructOffset(int ind, const string& str) {
+    LOOP(i, 0, struct_defs[ind].var_name.size()) {
+        if (struct_defs[ind].var_name[i] == str) return struct_defs[ind].offset[i];
+    }
+}
+
 int Compiler::GetStructId(const string& str) {
     LOOP(i, 0, struct_defs.size()) {
         if (str == struct_defs[i].label) return i;
@@ -217,7 +249,6 @@ int Compiler::GetStructId(const string& str) {
 Compiler::STRUCT_DEF& Compiler::GetStructById(int i) {
     return struct_defs[i];
 }
-
 
 #pragma endregion
 
@@ -496,11 +527,16 @@ string Compiler::EvalExp() {
             } else if (op == "?") {
                 string op1 = res.top(); res.pop();
 
-                res.push(Deref(op1));
+                //res.push(Deref(op1));
             } else if (op == "$") {
                 string op1 = res.top(); res.pop();
 
-                res.push(Ref(op1));
+                res.push(Ref(op1)); // got todo smth here
+            } else if (op == ".") {
+                string op1 = res.top(); res.pop();
+                string op2 = res.top(); res.pop();
+
+               // res.push(MemAcc(op1));
             }
         } else {
             res.push(op);
