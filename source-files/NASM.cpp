@@ -26,10 +26,10 @@ string NASM::SizeToReg(unsigned int size, char type, char sub_type) {
     return size == 4 ? D_32 : (size == 2 ? D_16 : (sub_type == 'H' ? D_8H : D_8L));
 }
 
-string NASM::ToFunRet(const string& str) {
-    return ".ret_" + str;
-}
-
 string NASM::IdToType(int i) {
     return type_specifiers[i];
+}
+
+string NASM::ToScopeEnd(const string& str) {
+    return ".end_" + str;
 }

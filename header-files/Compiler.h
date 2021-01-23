@@ -116,6 +116,7 @@ private:
     static vector <STRUCT_DEF> struct_defs;
 
     static unsigned int GetStructOffset(int, const string&);
+    static VAR_TYPE& GetStructField(int, const string&);
     static int GetStructId(const string&);
     static STRUCT_DEF& GetStructById(int);
 
@@ -146,14 +147,14 @@ private:
         bool loop;
         bool is_fun;
         string condition;
-        int vars_defined;
+        unsigned int stack_alloc;
 
         void reset() {
             label.clear();
             loop = false;
             is_fun = false;
             condition.clear();
-            vars_defined = 0;
+            stack_alloc = 0;
         }
     } next_scope_params;
 
@@ -175,6 +176,9 @@ private:
     static void FreeStack(unsigned int, bool = true);
 
     static void Ret();
+    static void Break(int);
+    static void Continue(int);
+    static void Skip(int);
 
     static string NewTempVar(unsigned int);
 

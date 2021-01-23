@@ -10,7 +10,7 @@ public:
     static string ToTempVar(int);
     static string ToFun(const string&);
     static string ToAnon(int);
-    static string ToFunRet(const string&);
+    static string ToScopeEnd(const string&);
 
     static string SizeToReg(unsigned int, char, char = 'L');
     static string IdToType(int);
@@ -64,6 +64,10 @@ public:
 
     static constexpr char const* const CALL = "call";
     static constexpr char const* const RET = "ret";
+    static constexpr char const* const JMP = "jmp";
+
+    static constexpr char const* const CMP = "cmp";
+    static constexpr char const* const JE = "je";
 
     static constexpr char const* const CORE_FUN_NAME = "_start";
 

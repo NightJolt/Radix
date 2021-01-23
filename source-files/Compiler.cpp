@@ -195,7 +195,40 @@ void Compiler::ProcessInstrcution(const string& str) {
             exp_tokenizer.Pop();
         }
     } else if (first_token == "ret") {
+        exp_tokenizer.Pop();
+        exp_tokenizer.Pop(); // ":"
+
         Ret();
+    } else if (first_token == "break") {
+        exp_tokenizer.Pop();
+
+        if (exp_tokenizer.TokensLeft()) {
+            exp_tokenizer.Pop(); // ":"
+
+            Break(stoi(exp_tokenizer.NextToken()));
+        } else {
+            Break(1);
+        }
+    } else if (first_token == "continue") {
+        exp_tokenizer.Pop();
+
+        if (exp_tokenizer.TokensLeft()) {
+            exp_tokenizer.Pop(); // ":"
+
+            Continue(stoi(exp_tokenizer.NextToken()));
+        } else {
+            Continue(1);
+        }
+    } else if (first_token == "skip") {
+        exp_tokenizer.Pop();
+
+        if (exp_tokenizer.TokensLeft()) {
+            exp_tokenizer.Pop(); // ":"
+
+            Skip(stoi(exp_tokenizer.NextToken()));
+        } else {
+            Skip(1);
+        }
     } else {
         EvalExp();
     }
@@ -235,6 +268,12 @@ unsigned int Compiler::GetTypeSize(const VAR_TYPE& vt) {
 unsigned int Compiler::GetStructOffset(int ind, const string& str) {
     LOOP(i, 0, struct_defs[ind].var_name.size()) {
         if (struct_defs[ind].var_name[i] == str) return struct_defs[ind].offset[i];
+    }
+}
+
+Compiler::VAR_TYPE& Compiler::GetStructField(int ind, const string& str) {
+    LOOP(i, 0, struct_defs[ind].var_name.size()) {
+        if (struct_defs[ind].var_name[i] == str) return struct_defs[ind].var_type[i];
     }
 }
 
@@ -295,30 +334,45 @@ void Compiler::PushScope() {
         PushToAsm("." + next_scope_params.label + ":"); NewLineAsm();
     }
 
+    if (!next_scope_params.condition.empty()) {
+        exp_tokenizer.Clear();
+        exp_tokenizer.Process(next_scope_params.condition);
+
+        string res = "1";//EvalExp(); // todo change
+
+        PushInstruction(NASM::MOV, NASM::A_32, OP_TYPE::REGISTER, res, IdentifyOp(res));
+        PushInstruction(NASM::CMP, NASM::A_32, IdentifyOp(res), "0", OP_TYPE::CONSTANT);
+        PushInstruction(NASM::JE, NASM::ToScopeEnd(next_scope_params.label), OP_TYPE::CONSTANT, "", OP_TYPE::UNDEFINED);
+    }
+
     scope_frame.push_back(next_scope_params);
 }
 
 void Compiler::PopScope() {
     SCOPE& scope = scope_frame.back();
-    int cnt = scope.vars_defined;
+    unsigned int memory = scope.stack_alloc;
 
-    unsigned int mem_freed = 0;
+    FreeStack(memory);
 
-    while (cnt--) {
+    while (memory) {
         const VAR_STACK& vs = stack_mem[stack_mem.size() - 1];
 
-        mem_freed += vs.var.size;
+        memory -= vs.var.size;
         vs.target_vec->pop_back();
         stack_mem.pop_back();
     }
 
-    FreeStack(mem_freed);
+    if (scope.loop) {
+        PushToAsm(string(NASM::JMP) + " " + (scope.is_fun ? "" : ".") + scope.label);
 
-    PushToAsm(NASM::ToFunRet(scope.label) + ":"); NewLineAsm();
+        NewLineAsm();
+    }
 
-    scope_frame.pop_back();
+    PushToAsm(NASM::ToScopeEnd(scope.label) + ":"); NewLineAsm();
 
     if (scope.is_fun) PopStack();
+
+    scope_frame.pop_back();
 }
 
 void Compiler::AllocStack(unsigned int size) {
@@ -336,15 +390,69 @@ void Compiler::FreeStack(unsigned int size, bool free_stack_frame) {
 }
 
 void Compiler::Ret() {
-    FreeStack(stack_frame.back(), false); // todo mix of break and return wtf
+    FreeStack(stack_frame.back(), false);
 
     for (int i = (int)scope_frame.size() - 1; i >= 0; i--) {
         if (scope_frame[i].is_fun) {
-            PushToAsm("jmp " + NASM::ToFunRet(scope_frame[i].label)); NewLineAsm();
+            PushToAsm( string(NASM::JMP) + " " + NASM::ToScopeEnd(scope_frame[i].label)); NewLineAsm();
 
             break;
         }
     }
+}
+
+void Compiler::Break(int cnt) {
+    unsigned int free_mem = 0;
+
+    for (int i = (int)scope_frame.size() - 1; i >= 0; i--) {
+        free_mem += scope_frame[i].stack_alloc;
+
+        if (scope_frame[i].loop) cnt--;
+
+        if (!cnt) {
+            PushToAsm(string(NASM::JMP) + " " + NASM::ToScopeEnd(scope_frame.back().label)); NewLineAsm();
+
+            break;
+        }
+    }
+
+    FreeStack(free_mem, false);
+}
+
+void Compiler::Continue(int cnt) {
+    unsigned int free_mem = 0;
+
+    for (int i = (int)scope_frame.size() - 1; i >= 0; i--) {
+        free_mem += scope_frame[i].stack_alloc;
+
+        if (scope_frame[i].loop) cnt--;
+
+        if (!cnt) {
+            PushToAsm(string(NASM::JMP) + " " + NASM::ToFun(scope_frame.back().label)); NewLineAsm();
+
+            break;
+        }
+    }
+
+    FreeStack(free_mem, false);
+}
+
+void Compiler::Skip(int cnt) {
+    unsigned int free_mem = 0;
+
+    for (int i = (int)scope_frame.size() - 1; i >= 0; i--) {
+        free_mem += scope_frame[i].stack_alloc;
+
+        cnt--;
+
+        if (!cnt) {
+            PushToAsm(string(NASM::JMP) + " " + NASM::ToScopeEnd(scope_frame[i].label)); NewLineAsm();
+
+            break;
+        }
+    }
+
+    FreeStack(free_mem, false);
 }
 
 void Compiler::PushVarToStack(const string& str, const VAR_DEF& vd) {
@@ -353,7 +461,7 @@ void Compiler::PushVarToStack(const string& str, const VAR_DEF& vd) {
     } else {
         AllocStack(vd.size);
 
-        scope_frame[scope_frame.size() - 1].vars_defined++;
+        scope_frame[scope_frame.size() - 1].stack_alloc += vd.size;
 
         if (!local_var_defs.contains(str)) {
             local_var_defs[str] = vector <int> ();
@@ -680,18 +788,18 @@ string Compiler::Equ(const string& a, const string& b) {
     return a;
 }
 
-string Compiler::Deref(const string& a) {
-    /*const unsigned int size = 4;
+/*string Compiler::Deref(const string& a) {
+    const unsigned int size = 4;
     string out_var_name = NewTempVar(size);
     string reg = NASM::SizeToReg(size, 'A');
 
     string op1 = NASM::ToVar(a);
 
     PushInstruction(NASM::LEA, reg, OP_TYPE::REGISTER, op1, OP_TYPE::MEMORY);
-    PushInstruction(NASM::MOV, out_var_name, OP_TYPE::MEMORY, reg, OP_TYPE::REGISTER);*/
+    PushInstruction(NASM::MOV, out_var_name, OP_TYPE::MEMORY, reg, OP_TYPE::REGISTER);
 
     return "0";
-}
+}*/
 
 string Compiler::Ref(const string& a) {
     const unsigned int size = 4;
@@ -702,6 +810,22 @@ string Compiler::Ref(const string& a) {
 
     PushInstruction(NASM::LEA, reg, OP_TYPE::REGISTER, op1, OP_TYPE::MEMORY);
     PushInstruction(NASM::MOV, out_var_name, OP_TYPE::MEMORY, reg, OP_TYPE::REGISTER);
+
+    return out_var_name;
+}
+
+string Compiler::MemAcc(const string& a, const string& b) {
+    int struct_id = GetStructId(a);
+
+    unsigned int var_offset = GetVarOffset(a);
+    unsigned int field_offset = var_offset + GetStructOffset(struct_id, b);
+
+    string out_var_name = NewTempVar(GetTypeSize(GetStructField(struct_id, b)));
+    /*string reg = NASM::SizeToReg(, 'A');
+
+    string op1 = NASM::ToVar(a);
+
+    PushInstruction(NASM::MOV, out_var_name, OP_TYPE::MEMORY, reg, OP_TYPE::REGISTER);*/
 
     return out_var_name;
 }
