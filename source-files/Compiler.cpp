@@ -338,7 +338,7 @@ void Compiler::PushScope() {
         exp_tokenizer.Clear();
         exp_tokenizer.Process(next_scope_params.condition);
 
-        string res = "1";//EvalExp(); // todo change
+        string res = EvalExp(); // todo change
 
         PushInstruction(NASM::MOV, NASM::A_32, OP_TYPE::REGISTER, res, IdentifyOp(res));
         PushInstruction(NASM::CMP, NASM::A_32, IdentifyOp(res), "0", OP_TYPE::CONSTANT);
@@ -346,6 +346,8 @@ void Compiler::PushScope() {
     }
 
     scope_frame.push_back(next_scope_params);
+
+    next_scope_params.reset();
 }
 
 void Compiler::PopScope() {
@@ -363,9 +365,7 @@ void Compiler::PopScope() {
     }
 
     if (scope.loop) {
-        PushToAsm(string(NASM::JMP) + " " + (scope.is_fun ? "" : ".") + scope.label);
-
-        NewLineAsm();
+        PushToAsm(string(NASM::JMP) + " " + (scope.is_fun ? "" : ".") + scope.label); NewLineAsm();
     }
 
     PushToAsm(NASM::ToScopeEnd(scope.label) + ":"); NewLineAsm();
@@ -403,6 +403,7 @@ void Compiler::Ret() {
 
 void Compiler::Break(int cnt) {
     unsigned int free_mem = 0;
+    int target = -1;
 
     for (int i = (int)scope_frame.size() - 1; i >= 0; i--) {
         free_mem += scope_frame[i].stack_alloc;
@@ -410,17 +411,24 @@ void Compiler::Break(int cnt) {
         if (scope_frame[i].loop) cnt--;
 
         if (!cnt) {
-            PushToAsm(string(NASM::JMP) + " " + NASM::ToScopeEnd(scope_frame.back().label)); NewLineAsm();
+            target = i;
 
             break;
         }
     }
 
     FreeStack(free_mem, false);
+
+    if (cnt > -1) {
+        PushToAsm(string(NASM::JMP) + " " + NASM::ToScopeEnd(scope_frame[target].label));
+
+        NewLineAsm();
+    }
 }
 
 void Compiler::Continue(int cnt) {
     unsigned int free_mem = 0;
+    int target = -1;
 
     for (int i = (int)scope_frame.size() - 1; i >= 0; i--) {
         free_mem += scope_frame[i].stack_alloc;
@@ -428,17 +436,24 @@ void Compiler::Continue(int cnt) {
         if (scope_frame[i].loop) cnt--;
 
         if (!cnt) {
-            PushToAsm(string(NASM::JMP) + " " + NASM::ToFun(scope_frame.back().label)); NewLineAsm();
+            target = i;
 
             break;
         }
     }
 
     FreeStack(free_mem, false);
+
+    if (cnt > -1) {
+        PushToAsm(string(NASM::JMP) + " " + (scope_frame[target].is_fun ? "" : ".") + scope_frame[target].label);
+
+        NewLineAsm();
+    }
 }
 
 void Compiler::Skip(int cnt) {
     unsigned int free_mem = 0;
+    int target = -1;
 
     for (int i = (int)scope_frame.size() - 1; i >= 0; i--) {
         free_mem += scope_frame[i].stack_alloc;
@@ -446,13 +461,19 @@ void Compiler::Skip(int cnt) {
         cnt--;
 
         if (!cnt) {
-            PushToAsm(string(NASM::JMP) + " " + NASM::ToScopeEnd(scope_frame[i].label)); NewLineAsm();
+            target = i;
 
             break;
         }
     }
 
     FreeStack(free_mem, false);
+
+    if (cnt > -1) {
+        PushToAsm(string(NASM::JMP) + " " + NASM::ToScopeEnd(scope_frame[target].label));
+
+        NewLineAsm();
+    }
 }
 
 void Compiler::PushVarToStack(const string& str, const VAR_DEF& vd) {
