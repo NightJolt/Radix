@@ -62,13 +62,14 @@ Here is a list of all available operators
 
 | Operator   | Function                                         | return          | usage     | precedence |
 |------------|--------------------------------------------------|-----------------|-----------|---|
-| =          | Stores rightside value into leftside variable    | leftside var    | a = b     | 2 |
+| =          | Stores rightside value into leftside variable    | rightside value | a = b     | 2 |
 | +          | Adds two values                                  | value           | a + b     | 12 |
 | -          | Subtracts right value from left value            | value           | a - b     | 12 |
 | $          | Returns variable memory address                  | address         | a$        | 15 |
 | ?          | Dereferences memory pointer                      | value           | a ? i32   | 15 |
 | :          | Calls function                                   | value           | f : a, b  | 0 |
 | &          | Logical and                                      | value           | a & b     | 7 |
+| ?=         | Dereference and assign                           | rightside value | a ?=i8 b  | 2 |
   
 ### Functions
 
@@ -128,7 +129,7 @@ you can loop unconditionally any code segment by putting it into loop {}
 		i32 a = 1;
 	}
 
-However, you can add condition to it so you can break out of it at certain moment
+However, you can addcondition to it so you can break out of it at certain moment
 	
 	i32 a = 5;
 	
@@ -155,11 +156,11 @@ Sometimes its also important to break loop. To do so simply call break;
 
 	loop { break; }
 
-But Sometimes its more important to break from multipe loops. To do so pass how many nested loops you want to break from as argument.
+But Sometimes its even more important to break from multipe loops. To do so pass how many nested loops you want to break from as argument.
 
 	loop { loop { loop { break : 3; } } }
 
-Same syntax goes with continue which can make program jump at the start of the loop
+Same syntax goes with continue which can make program jump at start of loop
 
 	loop { loop { loop { continue : 2; } }
 
@@ -171,13 +172,13 @@ By skipping scopes you just jump at the end of the scope
 
 And finally you can exit program at any time. Just call `exit` to do so
 
-	fun start { exit; }
+	exit;
 
-But it can take no args as you can not exit from more then one program. Obviously
+But it can take no args as you can not exit more then one program. Obviously
 
-### in / out
+### in/out
 
-You can write simple input / output by calling `in : a` or `out : a`, but it can only read and write in ascii format, so it means that inputting '1' is really '49'. It will read and write number of bytes according to variable type. If constant is used then 4 bytes are written
+You can write simple input / output by calling `in : a` or `out : a`, but it can only read and write in ascii format, so it means that inputting '1' is really '49'. It will read and write number of bytes according to variable type. If constant is used then 4 bytes are read / written
 
 ### stack, scopes
 
@@ -187,17 +188,42 @@ Each stack frame is created when program enters new function. Recursive function
 
 Use `#add` macro to include files from the same or different directory.
 
-	------ helper.rad ------
+	------ ./helper.rad ------
 	fun sum : i32 a  
 	type : i32 {  
 	    if : a { ret: a + (sum: a - 1); }  
 	  
-	    ret : a;
+	    ret : a;  
 	}
 
 	------ main.rad ------
-	#add ./helper.rad  
+	#add helper.rad  
   
 	fun start {  
 	    out : (sum: 3) + '0';  
 	}
+
+### arrays, reference, dereference
+
+Variable references are stored in `i32`
+To store reference use `$` operator
+
+	i8 a = 'a';
+	i32 ref = a$;
+
+To dereference and get value dereference it by `?` operator followed by type specifier
+
+	a = ref ? i8;
+
+To change variable value from its reference use `?=` operator followed by type specifier
+
+	ref ?=i8 (mul: 5, 4) + 2;
+
+Arrays are declared using arr keyword followed by type specifier, variable name and size as first argument
+
+	arr i16 a : 100;
+
+You can directly change second memer of array by following code
+
+	(a$ + 2) ?=i16 98;
+	` Notice +2 is used as i16 is 2 bytes long
