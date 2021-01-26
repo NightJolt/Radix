@@ -59,7 +59,7 @@ private:
     static string Ass(const string&, const string&);
     static string Def(const string&, const string&);
     static string Ref(const string&);
-    static string Call(const string&, vector <string>&); //todo add args
+    static string Call(const string&, vector <string>&);
 
     static void Cmp(const string&, const string&);
     static void In(const string&);

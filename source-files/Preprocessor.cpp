@@ -46,8 +46,6 @@ void Preprocessor::ProcessLine(string& line) {
     if (line[0] == '#') {
         ProcessMacro(line);
     } else if (line[0] != '`') {
-        // todo insert \n after ; { }
-
         out_file << line << endl;
     }
 

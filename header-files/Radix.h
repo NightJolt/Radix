@@ -39,5 +39,5 @@ private:
             "&=", "|=", "^=", "!=",
             ":", ",",
             "?", "$"
-    }; // todo right to left associativity
+    };
 };

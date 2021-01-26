@@ -28,23 +28,21 @@ int main(int arg_cnt, char** arg_vec) {
         }
     }
 
-    /*StringTokenizer st(Radix::exp_delims, sizeof Radix::exp_delims / sizeof *Radix::exp_delims, true, StringTokenizer::LAST_TO_FIT);
-    st.Process("umm :");
-    vector <string> exp = Expression::InfixToPostfix(st);
+    char* prad_file = strdup(arg_vec[2]);
+    char* asm_file = strdup(arg_vec[2]);
 
-    LOOP(i, 0, exp.size()) {
-        cout << exp[i] << " ";
-    } cout << endl;*/
+    strcat(prad_file, ".prad");
+    strcat(asm_file, ".asm");
 
-    Preprocessor::Init(project_path, "out.prad");
+    Preprocessor::Init(project_path, prad_file);
     Preprocessor::ProcessFile(main_file);
     Preprocessor::Term();
 
-    Compiler::Init("out.asm");
-    Compiler::Assemble("out.prad");
+    Compiler::Init(asm_file);
+    Compiler::Assemble(prad_file);
 
-    system("nasm -f elf out.asm");
-    system("ld -m elf_i386 -s -o out out.o");
+    system((string("nasm -f elf ") + asm_file).c_str());
+    system((string("ld -m elf_i386 -s -o ") + arg_vec[2] + " " + arg_vec[2] + ".o").c_str());
 
     return 0;
 }

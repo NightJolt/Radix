@@ -121,7 +121,6 @@ void Compiler::ProcessInstrcution(const string& str) {
     FUN_DEF fun;;
 
     while (true) {
-        // todo maybe simplify
         if ((scope_attr_id = Radix::GetScopeAttrId(exp_tokenizer.NextTokenUnpopped())) == -1) break;
 
         exp_tokenizer.Pop();
@@ -280,7 +279,7 @@ void Compiler::PushScope() {
         exp_tokenizer.Clear();
         exp_tokenizer.Process(next_scope_params.condition);
 
-        string res = EvalExp(); // todo change
+        string res = EvalExp();
 
         PushInstruction(NASM::MOV, NASM::A_32, OP_TYPE::REGISTER, res, IdentifyOp(res));
         PushInstruction(NASM::CMP, NASM::A_32, OP_TYPE::REGISTER, "0", OP_TYPE::CONSTANT);
@@ -654,7 +653,7 @@ string Compiler::EvalExp() {
 
         int ip_ind = Radix::GetOperatorId(op);
 
-        if (ip_ind != -1/* && op != ","*/) {
+        if (ip_ind != -1) {
             if (op == "+") {
                 string op1 = res.top(); res.pop();
                 string op2 = res.top(); res.pop();
@@ -688,7 +687,7 @@ string Compiler::EvalExp() {
             } else if (op == "$") {
                 string op1 = res.top(); res.pop();
 
-                res.push(Ref(op1)); // got todo smth here
+                res.push(Ref(op1));
             }
         } else {
             res.push(op);

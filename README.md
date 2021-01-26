@@ -155,7 +155,7 @@ But Sometimes its more important to break from multipe loops. To do so pass how 
 
 	loop { loop { loop { break : 3; } } }
 
-Same syntax goes with continue which can make program jump at start of loop
+Same syntax goes with continue which can make program jump at the start of the loop
 
 	loop { loop { loop { continue : 2; } }
 
@@ -178,3 +178,22 @@ You can write simple input / output by calling `in : a` or `out : a`, but it can
 ### stack, scopes
 
 Each stack frame is created when program enters new function. Recursive functions Create new stack as they enter itself again. You can not access variables from another stack. All variables are destroyed at the end of the scope. You can define variables with the same name as many times as you wish. The last defined variable with same will be used when trying to access it
+  
+### macros
+
+Use `#add` macro to include files from the same or different directory.
+
+	------ helper.rad ------
+	fun sum : i32 a  
+	type : i32 {  
+	    if : a { ret: a + (sum: a - 1); }  
+	  
+	    ret : a;  
+	}
+
+	------ main.rad ------
+	#add helper.rad  
+  
+	fun start {  
+	    out : (sum: 3) + '0';  
+	}
