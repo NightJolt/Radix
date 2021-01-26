@@ -8,7 +8,9 @@
   
 ## Compilation  
   
- ./radix [path-to-main-file] [program-name]  Running program generaters 2 major files:  
+ ./radix [path-to-main-file] [program-name] 
+
+Running program generaters 2 major files:  
   
 1. program-name.prad  
   
@@ -58,13 +60,15 @@ More complex expressions are also supported
 
 Here is a list of all available operators
 
-| Operator   | Function                                         | return          | usage     |
-|------------|--------------------------------------------------|-----------------|-----------|
-| =          | Stores rightside value into leftside variable    | leftside var    | a = b     |
-| +          | Stores 2 byte value                              | value           | a + b     |
-| -          | Stores 4 byte value, Stores memory address       | value           | a - b     |
-| $          | Returns variable memory address                  | address         | a$        |
-| ?          | Dereferences memory pointer                      | value           | a ? i32   |
+| Operator   | Function                                         | return          | usage     | precedence |
+|------------|--------------------------------------------------|-----------------|-----------|-|
+| =          | Stores rightside value into leftside variable    | leftside var    | a = b     | 2 |
+| +          | Adds two values                                  | value           | a + b     | 12 |
+| -          | Subtracts right value from left value            | value           | a - b     | 12 |
+| $          | Returns variable memory address                  | address         | a$        | 15 |
+| ?          | Dereferences memory pointer                      | value           | a ? i32   | 15 |
+| :          | Calls function                                   | value           | f : a, b  | 0 |
+| &          | Logical and                                      | value           | a & b     | 7 |
   
 ### Functions
 
@@ -155,7 +159,7 @@ But Sometimes its more important to break from multipe loops. To do so pass how 
 
 	loop { loop { loop { break : 3; } } }
 
-Same syntax goes with continue which can make program jump at the start of the loop
+Same syntax goes with continue which can make program jump at start of loop
 
 	loop { loop { loop { continue : 2; } }
 
