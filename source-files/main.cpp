@@ -29,7 +29,7 @@ int main(int arg_cnt, char** arg_vec) {
     }
 
     /*StringTokenizer st(Radix::exp_delims, sizeof Radix::exp_delims / sizeof *Radix::exp_delims, true, StringTokenizer::LAST_TO_FIT);
-    st.Process("b = a$ + (wtf:);");
+    st.Process("umm :");
     vector <string> exp = Expression::InfixToPostfix(st);
 
     LOOP(i, 0, exp.size()) {

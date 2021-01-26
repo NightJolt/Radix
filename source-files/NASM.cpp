@@ -33,3 +33,7 @@ string NASM::IdToType(int i) {
 string NASM::ToScopeEnd(const string& str) {
     return ".end_" + str;
 }
+
+string NASM::ToRetVal(const string& str) {
+    return ".@ret" + str;
+}

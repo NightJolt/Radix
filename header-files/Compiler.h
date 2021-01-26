@@ -20,12 +20,15 @@ private:
 
     static constexpr char const* const instruct_delims[] = { ";", "{", "}" };
     static StringTokenizer instruct_tokenizer;
+    static StringTokenizer exp_tokenizer;
 
     static void TokenizeCodeIntoInstructions(ifstream&);
     static void ProcessInstrcution(const string&);
 
     static void DefBuiltinFuns();
     static void DefBuiltinExit();
+    static void DefBuiltinIn();
+    static void DefBuiltinOut();
 
     enum OP_TYPE {
         UNDEFINED,
@@ -34,13 +37,13 @@ private:
         CONSTANT
     };
 
-    static void PushInstruction(const string&, const string&, OP_TYPE, const string&, OP_TYPE, const string& = "");
+    static void PushInstruction(const string&, const string& = "", OP_TYPE = OP_TYPE::UNDEFINED, const string& = "", OP_TYPE = OP_TYPE::UNDEFINED, const string& = "");
     static void PushOperand(const string&, OP_TYPE);
 
-    static void PushToAsm(const string&);
-    static void SeparatorAsm();
-    static void SpaceAsm();
-    static void NewLineAsm();
+    static void AsmPush(const string&);
+    static void AsmSeparator();
+    static void AsmSpace();
+    static void AsmNewLine();
 
     static OP_TYPE IdentifyOp(const string&);
     static bool IsTempVar(const string&);
@@ -53,72 +56,29 @@ private:
 
     static string Add(const string&, const string&);
     static string Sub(const string&, const string&);
-    static string Equ(const string&, const string&);
-    //static string Deref(const string&);
+    static string Ass(const string&, const string&);
+    static string Def(const string&, const string&);
     static string Ref(const string&);
-    static string MemAcc(const string&, const string&);
-    static string Call(const string&); //todo add args
+    static string Call(const string&, vector <string>&); //todo add args
 
-    static StringTokenizer exp_tokenizer;
+    static void Cmp(const string&, const string&);
+    static void In(const string&);
+    static void Out(const string&);
+    static void Ret(const string&);
+    static void Break(int);
+    static void Continue(int);
+    static void Skip(int);
+    static void Exit();
 
-#pragma region VARIABLE_TYPES
-
-    enum TYPE_CLUSTER {
-        VOID,
-        PRIMITIVE,
-        COMPLEX
-    };
-
-    /*enum VAR_REP {
-        VALUE,
-        POINTER
-    };*/
-
-    struct VAR_TYPE {
-        int type_id;
-        TYPE_CLUSTER cluster;
-    };
-
-    struct VAR_DEF {
-        unsigned int size = 0;
-        VAR_TYPE type;
-
-        void SetType(const VAR_TYPE& vt) {
-            type = vt;
-            size = GetTypeSize(vt);
-        }
-    };
+#pragma region VARIABLES
 
     struct VAR_STACK {
-        VAR_DEF var;
+        int type_id;
         unsigned int offset;
         vector <int>* target_vec;
     };
 
-    static unsigned int GetTypeSize(const VAR_TYPE&);
     static unsigned int GetVarSize(const string&);
-    static VAR_TYPE ToType(const string&);
-
-    /*
-     e.x.
-     struct point : i32 a, i32 b;
-     */
-
-    struct STRUCT_DEF {
-        unsigned int size = 0;
-        string label;
-
-        vector <VAR_TYPE> var_type;
-        vector <string> var_name;
-        vector <unsigned int> offset;
-    };
-
-    static vector <STRUCT_DEF> struct_defs;
-
-    static unsigned int GetStructOffset(int, const string&);
-    static VAR_TYPE& GetStructField(int, const string&);
-    static int GetStructId(const string&);
-    static STRUCT_DEF& GetStructById(int);
 
 #pragma endregion
 
@@ -127,13 +87,13 @@ private:
     struct FUN_DEF {
         FUN_DEF() { reset(); }
 
-        VAR_TYPE ret_type;
+        int ret_type;
 
-        vector <VAR_TYPE> arg_types;
+        vector <int> arg_types;
         vector <string> arg_names;
 
         void reset() {
-            ret_type.cluster = TYPE_CLUSTER::VOID;
+            ret_type = -1;
 
             arg_types.clear();
             arg_names.clear();
@@ -175,14 +135,9 @@ private:
     static void AllocStack(unsigned int);
     static void FreeStack(unsigned int, bool = true);
 
-    static void Ret();
-    static void Break(int);
-    static void Continue(int);
-    static void Skip(int);
+    static string NewTempVar(int);
 
-    static string NewTempVar(unsigned int);
-
-    static void PushVarToStack(const string&, const VAR_DEF&);
+    static void PushVarToStack(const string&, int);
     static unsigned int GetVarOffset(const string&);
 
     static vector <unsigned int> stack_frame; // number of bytes allocated in current stack

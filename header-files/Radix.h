@@ -18,12 +18,11 @@ public:
             "&", "|", "^", "!", ">>", "<<", "~",
             "&=", "|=", "^=", "!=",
             ":", ",",
-            "?", "$", ".",
+            "?", "$",
             " ", "(", ")" // extra line
     };
 
     static constexpr char const* const CORE_FUN_NAME = "start";
-    static constexpr char const* const VOID = "void";
 
 private:
 
@@ -39,6 +38,6 @@ private:
             "&", "|", "^", "!", ">>", "<<", "~",
             "&=", "|=", "^=", "!=",
             ":", ",",
-            "@", "$", "."
+            "?", "$"
     }; // todo right to left associativity
 };
