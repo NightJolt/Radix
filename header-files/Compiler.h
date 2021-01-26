@@ -64,7 +64,6 @@ private:
     static string Call(const string&, vector <string>&);
     static string LogAnd(const string&, const string&);
 
-    static void Cmp(const string&, const string&);
     static void In(const string&);
     static void Out(const string&);
     static void Ret(const string&);

@@ -843,7 +843,7 @@ string Compiler::Ass(const string& a, const string& b) {
         PushInstruction(NASM::MOV, a, OP_TYPE::MEMORY, reg, OP_TYPE::REGISTER);
     }
 
-    return a;
+    return b;
 }
 
 string Compiler::AssRef(const string& a, const string& b, const string& c) {
@@ -865,7 +865,7 @@ string Compiler::AssRef(const string& a, const string& b, const string& c) {
         PushInstruction(NASM::MOV, "[" + string(NASM::A_32) + "]", OP_TYPE::CONSTANT, reg, OP_TYPE::REGISTER, NASM::IdToType(type_id));
     }
 
-    return a;
+    return c;
 }
 
 string Compiler::Def(const string& a, const string& b) {
