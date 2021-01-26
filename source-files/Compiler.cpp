@@ -675,7 +675,7 @@ string Compiler::EvalExp() {
 
                 while (!IsFun(res.top())) {
                     args.push_back(res.top()); res.pop();
-                }
+                } reverse(args.begin(), args.end());
 
                 string fun_name = res.top(); res.pop();
 
@@ -857,7 +857,7 @@ string Compiler::Call(const string& a, vector <string>& args) {
         string var = NewTempVar(fd.arg_types[i]);
 
         if (IdentifyOp(args[i]) == OP_TYPE::CONSTANT) {
-            string type = NASM::IdToType(Data::SizeToId(NASM::DEFAULT_EXP_SIZE));
+            string type = NASM::IdToType(fd.arg_types[i]);
 
             PushInstruction(NASM::MOV, var, OP_TYPE::MEMORY, args[i], OP_TYPE::CONSTANT, type);
         } else {
