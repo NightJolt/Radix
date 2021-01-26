@@ -20,6 +20,6 @@ private:
     static string main_path;
     static ofstream out_file;
 
-    static constexpr char const* const delims[] = { "#", ":", " " };
+    static constexpr char const* const delims[] = { "#", " " };
     static StringTokenizer st;
 };

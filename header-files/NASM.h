@@ -70,6 +70,8 @@ public:
     static constexpr char const* const CMP = "cmp";
     static constexpr char const* const JE = "je";
 
+    static constexpr char const* const AND = "and";
+
     static constexpr char const* const CORE_FUN_NAME = "_start";
 
     static constexpr char const* const SYS_EXIT = "1";

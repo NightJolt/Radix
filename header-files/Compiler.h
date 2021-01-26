@@ -47,6 +47,7 @@ private:
 
     static OP_TYPE IdentifyOp(const string&);
     static bool IsTempVar(const string&);
+
     static bool IsVar(const string&);
     static bool IsFun(const string&);
 
@@ -57,9 +58,11 @@ private:
     static string Add(const string&, const string&);
     static string Sub(const string&, const string&);
     static string Ass(const string&, const string&);
+    static string AssRef(const string&, const string&, const string&);
     static string Def(const string&, const string&);
     static string Ref(const string&);
     static string Call(const string&, vector <string>&);
+    static string LogAnd(const string&, const string&);
 
     static void Cmp(const string&, const string&);
     static void In(const string&);
@@ -74,6 +77,7 @@ private:
 
     struct VAR_STACK {
         int type_id;
+        unsigned int size;
         unsigned int offset;
         vector <int>* target_vec;
     };
@@ -137,7 +141,7 @@ private:
 
     static string NewTempVar(int);
 
-    static void PushVarToStack(const string&, int);
+    static void PushVarToStack(const string&, int, int = 1);
     static unsigned int GetVarOffset(const string&);
 
     static vector <unsigned int> stack_frame; // number of bytes allocated in current stack

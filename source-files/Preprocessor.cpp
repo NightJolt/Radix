@@ -3,7 +3,7 @@
 string Preprocessor::main_path = string();
 ofstream Preprocessor::out_file = ofstream();
 
-StringTokenizer Preprocessor::st = StringTokenizer(delims, sizeof delims / sizeof *delims, true, StringTokenizer::FIRST_TO_FIT);
+StringTokenizer Preprocessor::st = StringTokenizer(delims, sizeof delims / sizeof *delims, false, StringTokenizer::FIRST_TO_FIT);
 
 void Preprocessor::Init(const string& path, const char* file_name) {
     main_path = path;
@@ -56,13 +56,10 @@ void Preprocessor::ProcessMacro(const string& line) {
     st.Clear();
 
     st.Process(line);
-    st.NextToken();
 
     string tag = st.NextToken();
 
     if (tag == "add") {
         ProcessFile(st.NextToken());
-    }/* else if (tag == "replace") {
-        string key, val;
-    }*/
+    }
 }
