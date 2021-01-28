@@ -223,7 +223,7 @@ Arrays are declared using arr keyword followed by type specifier, variable name 
 
 	arr i16 a : 100;
 
-You can directly change second memer of array by following code
+You can directly change second member of array by following code
 
 	(a$ + 2) ?=i16 98;
 	` Notice +2 is used as i16 is 2 bytes long
