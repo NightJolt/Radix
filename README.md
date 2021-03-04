@@ -164,7 +164,7 @@ Same syntax goes with continue which can make program jump at start of loop
 
 	loop { loop { loop { continue : 2; } }
 
-You can not just break from loop but also from regular scopes. Just skip em'
+You can not only break from a loop but also from regular scopes
 
 	{ { { { { skip : 3; } } } } }
 
