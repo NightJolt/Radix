@@ -8,7 +8,7 @@
   
 ## Compilation  
   
- ./radix [path-to-main-file] [program-name] 
+ 	./radix [path-to-main-file] [program-name] 
 
 Running program generaters 2 major files:  
   
@@ -23,7 +23,7 @@ Running program generaters 2 major files:
       
 Run compiled program:  
   
- ./[program-name]
+ 	./[program-name]
 
 ## Documentation 
 
