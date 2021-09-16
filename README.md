@@ -1,9 +1,9 @@
 
 # Radix  
   
-**Radix** language 32-bit assembler to **Netwide Assembler (NASM)** for linux  
+**Radix** language 32-bit compiler to **Netwide Assembler (NASM)** for linux  
   
-**Important:** install nasm package before running Radix assembler  
+**Important:** install nasm package before running Radix compiler  
   
   
 ## Compilation  
