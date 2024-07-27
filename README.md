@@ -1,7 +1,7 @@
 
 # Radix  
   
-**Radix** language 32-bit compiler to **Netwide Assembler (NASM)** for linux  
+**Radix** language 32-bit compiler to **x86** for linux  
   
 **Important:** install nasm package before running Radix compiler  
   
@@ -45,7 +45,7 @@ More complex expressions are also supported
 	i8 a = 97 + 5 - 3 + 1;
 	` Compiler uses compile time expression evaluation, so following code is translated to:
 	i8 a = 100;
-	` Than it's translated to NASM. However expressions containing variables can not be fully evaluated
+	` Than it's translated to x86. However expressions containing variables can not be fully evaluated
 	i16 a = 7 + 8;
 	i32 b = a + 5 - 4;
 	` This is simplified to following
